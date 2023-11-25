@@ -1,0 +1,27 @@
+{
+  "name": "middlifier",
+  "version": "1.0.0",
+  "description": "Middlifier provides a command where you can give instructions to build a general backend and middleware template.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "files": [
+    "/dist"
+  ],
+  "scripts": {
+    "start": "tsc && node ./src/build.js && node ./dist/index.js",
+    "delete": "rmdir /s /q dist"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@tsconfig/node-lts": "^18.12.5",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.3.2"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "fs": "^0.0.1-security"
+  }
+}
