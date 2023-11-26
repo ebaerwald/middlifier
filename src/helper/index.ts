@@ -13,6 +13,7 @@ export function installDependencies(usefullDependencies: string[], jsonDependenc
     let output = execSync('npm install ' + dependencieString, { encoding: 'utf-8' });
     console.log(output);
     dependencieString = '';
+    const installedUsefullDependencies: string[] = [];
     for (const dependencie of usefullDependencies)
     {
         if (!jsonDependencies.includes(dependencie))
@@ -21,9 +22,11 @@ export function installDependencies(usefullDependencies: string[], jsonDependenc
             if (answer.toLowerCase() === 'y')
             {
                 dependencieString += dependencie + ' ';
+                installedUsefullDependencies.push(dependencie);
             }
         }
     }
     output = execSync('npm install ' + dependencieString, { encoding: 'utf-8' });
     console.log(output);
+    return installedUsefullDependencies;
 }

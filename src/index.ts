@@ -41,22 +41,22 @@ export default function main()
             if (answer.toLowerCase() === 'y') 
             {
                 console.log('\nInstalling backend dependencies...');
-                installBackendDependencies(jsonObj);
+                const installedUsefullBackendDependencies = installBackendDependencies(jsonObj);
                 console.log(chalk.greenBright.bold('✔ ') + 'Backend dependencies were installed!');
                 console.log('\nBuilding backend...');
-                buildBackend(jsonObj);
+                buildBackend(installedUsefullBackendDependencies, jsonObj);
                 console.log(chalk.greenBright.bold('✔ ') + 'Backend was built!');
                 console.log('\nInstalling middleware dependencies...');
-                installMiddlewareDependencies(jsonObj);
+                const installedUsefullMiddlewareDependencies = installMiddlewareDependencies(jsonObj);
                 console.log(chalk.greenBright.bold('✔ ') + 'Middleware dependencies were installed!');
                 console.log('\nBuilding middleware...');   
-                buildMiddleware(jsonObj); 
+                buildMiddleware(installedUsefullMiddlewareDependencies, jsonObj); 
                 console.log(chalk.greenBright.bold('✔ ') + 'Middleware was built!');
             } 
             else
             {
-                installBackendDependencies();
-                buildBackend();
+                const installedUsefullBackendDependencies = installBackendDependencies();
+                buildBackend(installedUsefullBackendDependencies);
             }
         }
     }, 500);

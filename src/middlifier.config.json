@@ -2,13 +2,21 @@
   "backend": {
     "port": 8080,
     "dependencies": [
-      "nodemon",
-      "cors"
-    ]
+      "cors",
+      "body-parser",
+      "mongoose"
+    ],
+    "express": {
+      "cors": "",
+      "json": "",
+      "urlencoded": ""
+    },
+    "language": "js"
   },
   "middleware": {
     "dependencies": [
       "axios"
-    ]
+    ],
+    "language": "js"
   }
 }

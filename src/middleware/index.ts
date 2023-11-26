@@ -1,5 +1,5 @@
 import fs from 'fs';
-export default function buildMiddleware(jsonObj: any = {})
+export default function buildMiddleware(aditionalDependencies: string[], jsonObj: any = {})
 {
     
 }
