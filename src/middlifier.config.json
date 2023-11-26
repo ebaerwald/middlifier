@@ -1,10 +1,14 @@
 {
   "backend": {
     "port": 8080,
-    "express": "global",
-    "nodemon": "global",
-    "node": "global",
-    "cors": "global"
+    "dependencies": [
+      "nodemon",
+      "cors"
+    ]
   },
-  "middleware": {}
+  "middleware": {
+    "dependencies": [
+      "axios"
+    ]
+  }
 }
