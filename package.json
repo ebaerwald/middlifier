@@ -1,6 +1,6 @@
 {
   "name": "middlifier",
-  "version": "1.0.0",
+  "version": "1.0.7",
   "description": "Middlifier provides a command where you can give instructions to build a general backend and middleware template.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -15,6 +15,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "bin": {
+    "middlifier-build": "./dist/bin.js"
+  },
   "devDependencies": {
     "@tsconfig/node-lts": "^18.12.5",
     "ts-node": "^10.9.1",
