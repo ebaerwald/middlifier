@@ -10,13 +10,12 @@
       "cors": "",
       "json": "",
       "urlencoded": ""
-    },
-    "language": "js"
+    }
   },
   "middleware": {
     "dependencies": [
       "axios"
-    ],
-    "language": "js"
-  }
+    ]
+  },
+  "language": "js"
 }

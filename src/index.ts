@@ -1,15 +1,9 @@
 import chalk from "chalk";
-import readline from "readline";
 import * as url from "url";
 import jsonObj from './middlifier.config.json' assert {type: 'json'};
-import installBackendDependencies from "./backend/dependencies";
-import installMiddlewareDependencies from "./middleware/dependencies";
 import buildBackend from "./backend/index";
 import buildMiddleware from "./middleware/index";
-import createPrompt from "prompt-sync";
-import { execSync } from 'child_process';
-
-const input = createPrompt();
+import { input } from "./helper";
 
 export default function main()
 {
@@ -34,30 +28,33 @@ export default function main()
             console.log('Current Directory: ' + process.cwd());
             answer = input('Are you at the root folder? ' + chalk.bold('(y/n) '));
         }
+        let lang;
         if (jsonObj)
         {
+            if (jsonObj.language)
+            {
+                lang = jsonObj.language;
+            }
+            else
+            {   
+                lang = input('Would you like to use TypeScript in your project? ' + chalk.bold('(y/n) ')).toLowerCase() === 'y' ? 'ts' : 'js';
+            }
+
             console.log('');
             answer = input('You have a middlifier.config.json file in your project. Would you like to use it? ' + chalk.bold('(y/n) '));
             if (answer.toLowerCase() === 'y') 
             {
-                console.log('\nInstalling backend dependencies...');
-                const installedUsefullBackendDependencies = installBackendDependencies(jsonObj);
-                console.log(chalk.greenBright.bold('✔ ') + 'Backend dependencies were installed!');
-                console.log('\nBuilding backend...');
-                buildBackend(installedUsefullBackendDependencies, jsonObj);
-                console.log(chalk.greenBright.bold('✔ ') + 'Backend was built!');
-                console.log('\nInstalling middleware dependencies...');
-                const installedUsefullMiddlewareDependencies = installMiddlewareDependencies(jsonObj);
-                console.log(chalk.greenBright.bold('✔ ') + 'Middleware dependencies were installed!');
-                console.log('\nBuilding middleware...');   
-                buildMiddleware(installedUsefullMiddlewareDependencies, jsonObj); 
-                console.log(chalk.greenBright.bold('✔ ') + 'Middleware was built!');
+                const backend = jsonObj.backend || null;
+                buildBackend(backend, lang);
+                const middleware = jsonObj.middleware || null;
+                buildMiddleware(middleware, lang);
             } 
             else
             {
-                const installedUsefullBackendDependencies = installBackendDependencies();
-                buildBackend(installedUsefullBackendDependencies);
+                buildBackend(null, lang);
+                buildMiddleware(null, lang);
             }
+            console.log(chalk.greenBright.bold('✔ ') + 'Middlifier has finished building your project!');
         }
     }, 500);
 }

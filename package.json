@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "start": "tsc && node ./src/build.js && node ./dist/index.js",
-    "delete": "rmdir /s /q dist"
+    "delete": "rmdir /s /q dist backend frontend"
   },
   "keywords": [],
   "author": "",
@@ -30,8 +30,8 @@
     "chalk": "^5.3.0",
     "cors": "^2.8.5",
     "fs": "^0.0.1-security",
-    "mongoose": "^8.0.1",
-    "nodemon": "^3.0.1",
+    "mongoose": "^8.0.2",
+    "nodemon": "^3.0.2",
     "prompt-sync": "^4.2.0"
   }
 }

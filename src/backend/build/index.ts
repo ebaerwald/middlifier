@@ -3,20 +3,11 @@ import createPrompt from "prompt-sync";
 import chalk from 'chalk';
 const input = createPrompt();
 
-export function buildIndex(aditionalDependencies: string[], backend: any = {})
+export function buildIndex(obj: any, installedDep: string, lang: string)
 {
-    let fileExtension = backend.language;
-    if (!fileExtension)
-    {
-        fileExtension = input('What language would you like to use for the backend? ' + chalk.bold('(ts/js) '));  
-        if (fileExtension.toLowerCase() !== ('ts' || 'js'))
-        {
-            fileExtension = 'js';
-        }
-    }
     const fileName = 'index';
-    const fileContent = getFileLines(aditionalDependencies, backend).join('\n');
-    fs.writeFile(fileName + '.' + fileExtension, fileContent, (err) => {
+    const fileContent = getFileLines(installedDep, obj).join('\n');
+    fs.writeFile(fileName + '.' + lang, fileContent, (err) => {
         if (err) {
           console.error(`Error creating file: ${err.message}`);
         } else {
@@ -25,21 +16,21 @@ export function buildIndex(aditionalDependencies: string[], backend: any = {})
     });
 }
 
-function getFileLines(aditionalDependencies: string[], backend: any): string[]
+function getFileLines(installedDep: string, obj: any): string[]
 {
-    console.log(backend);
+    console.log(obj);
     const lines: string[] = [];
     lines.push(`import express from 'express';`);
-    if (backend.dependencies.includes('cors') || aditionalDependencies.includes('cors')) lines.push(`import cors from 'cors';`);
-    if (backend.dependencies.includes('body-parser') || aditionalDependencies.includes('body-parser')) lines.push(`import bodyParser from 'body-parser';`);
+    if (obj.dependencies.includes('cors') || installedDep.includes('cors')) lines.push(`import cors from 'cors';`);
+    if (obj.dependencies.includes('body-parser') || installedDep.includes('body-parser')) lines.push(`import bodyParser from 'body-parser';`);
     lines.push(`const server = express();`);
     lines.push(``);
-    if (backend.express.cors) lines.push(`server.use(cors());`);
-    if (backend.express.json) lines.push(`server.use(express.json());`);
-    if (backend.express.urlencoded) lines.push(`server.use(express.urlencoded());`);
+    if (obj.express.cors) lines.push(`server.use(cors());`);
+    if (obj.express.json) lines.push(`server.use(express.json());`);
+    if (obj.express.urlencoded) lines.push(`server.use(express.urlencoded());`);
     lines.push(``);
-    lines.push(`server.listen(${backend.port}, () => {`);
-    lines.push(`    console.log('Server is listening on port ${backend.port}!');`);
+    lines.push(`server.listen(${obj.port}, () => {`);
+    lines.push(`    console.log('Server is listening on port ${obj.port}!');`);
     lines.push(`});`);
     return lines;
 }
