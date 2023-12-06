@@ -1,36 +1,22 @@
-import fs from 'fs';
-import createPrompt from "prompt-sync";
-import chalk from 'chalk';
-const input = createPrompt();
+import { getObjValue, writeFile, writeLine } from '../../helper';
 
 export function buildIndex(obj: any, installedDep: string, lang: string)
 {
-    const fileName = 'index';
-    const fileContent = getFileLines(installedDep, obj).join('\n');
-    fs.writeFile(fileName + '.' + lang, fileContent, (err) => {
-        if (err) {
-          console.error(`Error creating file: ${err.message}`);
-        } else {
-          console.log(`File '${fileName}' created successfully.`);
-        }
-    });
+  writeFile('index.' + lang, getFileLines(installedDep, obj));
 }
 
 function getFileLines(installedDep: string, obj: any): string[]
 {
-    console.log(obj);
-    const lines: string[] = [];
-    lines.push(`import express from 'express';`);
-    if (obj.dependencies.includes('cors') || installedDep.includes('cors')) lines.push(`import cors from 'cors';`);
-    if (obj.dependencies.includes('body-parser') || installedDep.includes('body-parser')) lines.push(`import bodyParser from 'body-parser';`);
-    lines.push(`const server = express();`);
-    lines.push(``);
-    if (obj.express.cors) lines.push(`server.use(cors());`);
-    if (obj.express.json) lines.push(`server.use(express.json());`);
-    if (obj.express.urlencoded) lines.push(`server.use(express.urlencoded());`);
-    lines.push(``);
-    lines.push(`server.listen(${obj.port}, () => {`);
-    lines.push(`    console.log('Server is listening on port ${obj.port}!');`);
-    lines.push(`});`);
-    return lines;
+  writeLine(true, `import express from 'express';`);
+  writeLine(getObjValue(obj, 'dependencies').includes('cors') || installedDep.includes('cors'), `import cors from 'cors';`);
+  writeLine(getObjValue(obj, 'dependencies').includes('body-parser') || installedDep.includes('body-parser'), `import bodyParser from 'body-parser';`);
+  writeLine(true, `const server = express();`);
+  writeLine(true, ``);
+  writeLine(getObjValue(obj, ['express', 'cors']), `server.use(cors());`);
+  writeLine(getObjValue(obj, ['express', 'json']), `server.use(express.json(#));`);
+  writeLine(getObjValue(obj, ['express', 'urlencoded']), `server.use(express.urlencoded(#));`);
+  writeLine(true, ``);
+  writeLine(true, `server.listen(${getObjValue(obj, 'port', 8080)}, () => {`);
+  writeLine(true, `    console.log('Server is listening on port ${getObjValue(obj, 'port', 8080)}!');`);
+  return writeLine(true, `});`);
 }

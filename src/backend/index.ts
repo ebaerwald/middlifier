@@ -4,22 +4,22 @@ import { buildIndex } from './build/index';
 import { buildRouter } from './build/router';
 import { buildController } from './build/controller';
 import { buildDatabase } from './build/database';
-import { installDependencies, pathExists } from '../helper';
+import { installDependencies, pathExists, getObjValue } from '../helper';
 
-export default function buildBackend(obj: any, lang: string)
+export default async function buildBackend(obj: any, lang: string)
 {
     if (!pathExists('./backend'))
     {
-      fs.mkdir('./backend', (err) => {
+      await fs.mkdir('./backend', (err) => {
         if (err) {
           console.error(`Error creating directory: ${err.message}`);
         }
       });
     } 
-    process.chdir('backend');
+    process.chdir('./backend');
     const output = execSync('npm init -y', { encoding: 'utf-8' });
     console.log(output);
-    const dep = obj.dependencies || null;
+    const dep = getObjValue(obj, 'dependencies');
     const installedDep = installDependencies(dep, ['express', 'cors'], ['helmet', 'morgan']);
     buildIndex(obj, installedDep, lang);
     buildRouter(obj, installedDep, lang);

@@ -8,7 +8,7 @@ import { input } from "./helper";
 export default function main()
 {
     console.log(chalk.blue("Welcome to Middlifier! 🎉\n"));
-    setTimeout(() => {
+    setTimeout(async () => {
 
         console.log('Current Directory: ' + process.cwd());
         let answer = input('Are you in the root folder? ' + chalk.bold('(y/n) '));
@@ -45,14 +45,14 @@ export default function main()
             if (answer.toLowerCase() === 'y') 
             {
                 const backend = jsonObj.backend || null;
-                buildBackend(backend, lang);
+                await buildBackend(backend, lang);
                 const middleware = jsonObj.middleware || null;
-                buildMiddleware(middleware, lang);
+                await buildMiddleware(middleware, lang);
             } 
             else
             {
-                buildBackend(null, lang);
-                buildMiddleware(null, lang);
+                await buildBackend(null, lang);
+                await buildMiddleware(null, lang);
             }
             console.log(chalk.greenBright.bold('✔ ') + 'Middlifier has finished building your project!');
         }
