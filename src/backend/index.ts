@@ -17,10 +17,34 @@ export default async function buildBackend(obj: any, lang: string)
       });
     } 
     process.chdir('./backend');
+    if (!pathExists('./controller'))
+    {
+      await fs.mkdir('./controller', (err) => {
+        if (err) {
+          console.error(`Error creating directory: ${err.message}`);
+        }
+      });
+    }
+    if (!pathExists('./mongoDB'))
+    {
+      await fs.mkdir('./mongoDB', (err) => {
+        if (err) {
+          console.error(`Error creating directory: ${err.message}`);
+        }
+      });
+    }
+    if (!pathExists('./routes'))
+    {
+      await fs.mkdir('./routes', (err) => {
+        if (err) {
+          console.error(`Error creating directory: ${err.message}`);
+        }
+      });
+    }
     const output = execSync('npm init -y', { encoding: 'utf-8' });
     console.log(output);
     const dep = getObjValue(obj, 'dependencies');
-    const installedDep = installDependencies(dep, ['express', 'cors'], ['helmet', 'morgan']);
+    const installedDep = installDependencies(dep, ['express'], ['cors', 'body-parser']);
     buildIndex(obj, installedDep, lang);
     buildRouter(obj, installedDep, lang);
     buildController(obj, installedDep, lang);

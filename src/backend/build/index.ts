@@ -1,22 +1,27 @@
-import { getObjValue, writeFile, writeLine } from '../../helper';
+import { getObjValue, writeFile, writeLines, type LinesStruct, clearLines } from '../../helper';
 
 export function buildIndex(obj: any, installedDep: string, lang: string)
 {
   writeFile('index.' + lang, getFileLines(installedDep, obj));
+  clearLines();
 }
 
 function getFileLines(installedDep: string, obj: any): string[]
 {
-  writeLine(true, `import express from 'express';`);
-  writeLine(getObjValue(obj, 'dependencies').includes('cors') || installedDep.includes('cors'), `import cors from 'cors';`);
-  writeLine(getObjValue(obj, 'dependencies').includes('body-parser') || installedDep.includes('body-parser'), `import bodyParser from 'body-parser';`);
-  writeLine(true, `const server = express();`);
-  writeLine(true, ``);
-  writeLine(getObjValue(obj, ['express', 'cors']), `server.use(cors());`);
-  writeLine(getObjValue(obj, ['express', 'json']), `server.use(express.json(#));`);
-  writeLine(getObjValue(obj, ['express', 'urlencoded']), `server.use(express.urlencoded(#));`);
-  writeLine(true, ``);
-  writeLine(true, `server.listen(${getObjValue(obj, 'port', 8080)}, () => {`);
-  writeLine(true, `    console.log('Server is listening on port ${getObjValue(obj, 'port', 8080)}!');`);
-  return writeLine(true, `});`);
+  const lines: LinesStruct = [
+    {line: `import express from 'express';`},
+    {line: `import cors from 'cors';`, condition: installedDep.includes('cors'), askLine: true},
+    {line: `import bodyParser from 'body-parser';`, condition: installedDep.includes('body-parser'), askLine: true},
+    {line: ``},
+    {line: `const server = express();`},
+    {line: `server.use(cors());`, condition: getObjValue(obj, ['express', 'cors']), askLine: true},
+    {line: `server.use(express.json(#));`, replacements: ['#'], condition: getObjValue(obj, ['express', 'json']), askLine: true},
+    {line: `server.use(express.urlencoded(#));`, replacements: ['#'], condition: getObjValue(obj, ['express', 'urlencoded']), askLine: true},
+    {line: ``},
+    {line: `server.listen(${getObjValue(obj, 'port', 8080)}, () => {`},
+    {line: `    console.log('Server is listening on port ${getObjValue(obj, 'port', 8080)}!');`},
+    {line: `});`}
+  ]
+
+  return writeLines(lines);
 }

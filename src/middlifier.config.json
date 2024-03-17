@@ -1,21 +1,30 @@
 {
   "backend": {
     "port": 8080,
-    "dependencies": [
-      "cors",
-      "body-parser",
-      "mongoose"
-    ],
+    "dependencies": ["cors", "body-parser", "mongoose"],
     "express": {
       "cors": "",
       "json": "",
       "urlencoded": ""
-    }
-  },
-  "middleware": {
-    "dependencies": [
-      "axios"
+    },
+    "schemas": [
+      {
+        "user": {
+          "obj": { "name": "String", "email": "String", "password": "String" },
+          "funcs": [
+            {
+              "get": ["getUser", "getUsers"],
+              "post": ["createUser", "createUsers"],
+              "put": ["updateUser", "updateUsers"],
+              "delete": ["deleteUser", "deleteUsers"]
+            }
+          ]
+        }
+      }
     ]
   },
-  "language": "js"
+  "middleware": {
+    "dependencies": ["axios"]
+  },
+  "language": "ts"
 }
