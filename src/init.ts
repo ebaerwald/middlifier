@@ -1,3 +1,3 @@
 #!/usr/bin/env node
-import { init } from ".";
+import { init } from "./index";
 init();

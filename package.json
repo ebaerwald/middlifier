@@ -1,6 +1,6 @@
 {
   "name": "middlifier",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "description": "Middlifier provides a command where you can give instructions to build a general backend and middleware template.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,10 +9,16 @@
     "/dist"
   ],
   "scripts": {
-    "start": "tsc && node ./dist/index.js"
+    "start": "node ./dist/index.js",
+    "start-build": "npm run build && node ./dist/index.js",
+    "w-delete": "rmdir /s /q dist gen",
+    "l-delete": "rm -rf dist gen",
+    "build": "tsc && node ./src/build.js",
+    "generate": "node ./dist/build.js",
+    "generate-build": "npm run build && node ./dist/build.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "ebaerwald",
   "license": "ISC",
   "bin": {
     "middlifier-init": "./dist/init.js",
@@ -32,7 +38,7 @@
     "cors": "^2.8.5",
     "express": "^4.18.3",
     "fs": "^0.0.1-security",
-    "middlifier": "^1.0.14",
+    "middlifier": "^1.0.15",
     "mongoose": "^8.0.2",
     "nodemon": "^3.0.2",
     "prompt-sync": "^4.2.0"
