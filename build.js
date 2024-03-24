@@ -109,5 +109,4 @@ async function updateImports(filePath, imports)
 }
 
 const imports = getAllPossibleImports('./src');
-console.log(imports);
 iterateFiles('./dist', imports);

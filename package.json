@@ -1,6 +1,6 @@
 {
   "name": "middlifier",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "description": "Middlifier provides a command where you can give instructions to build a general backend and middleware template.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

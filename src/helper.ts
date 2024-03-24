@@ -24,5 +24,5 @@ export function setupNode(dependencies: string[], path: string | null = null)
     }
     execSync('npm init -y');
     execSync(`npm install ${dependencies.join(' ')}`);
-    process.chdir(process.cwd())
+    process.chdir('..');
 }

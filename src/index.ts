@@ -65,14 +65,14 @@ export function init()
 {
     setupNode([
         "nodemon", 
-        "@types/middlifier"
+        "middlifier"
     ], './gen');
     process.chdir('./gen');
     fs.writeFileSync('mid.config.ts', arrayToString([
         'import { MidConfig } from "middlifier";',
         '',
         'export const config: MidConfig = {',
-        '',
+        '   port: 4000,',
         '}',
     ]));
     fs.writeFileSync('index.ts', arrayToString([
@@ -85,18 +85,18 @@ export function init()
     fs.writeFileSync('nodemon.json', arrayToString([
         '{',
         '   "ext": "ts",',
-        '   "ignore": [".git", "node_modules/**/node_modules", "src/**/*.spec.ts"],',
+        '   "ignore": [".git", "node_modules/**/node_modules", "./**/*.spec.ts"],',
         '   "execMap": {',
         '       "ts": "node --require ts-node/register"',
-        '   "},',
-        '   "watch": ["src/"]',
+        '   },',
+        '   "watch": ["./"]',
         '}'
     ]));
     // ---------------------------------------
     // tsconfig.json
     execSync("npx tsc --init");
     let tsconfigContent = fs.readFileSync('tsconfig.json', { encoding: 'utf-8', flag: 'r' });
-    tsconfigContent = tsconfigContent.replace('// "outDir": "./"', '"outdir": "./dist');
+    tsconfigContent = tsconfigContent.replace('// "outDir": "./"', '"outDir": "./dist"');
     fs.writeFileSync('tsconfig.json', tsconfigContent);
     // ---------------------------------------
     // package.json
@@ -104,9 +104,9 @@ export function init()
     let packageJson = JSON.parse(packageJsonContent);
     if (!packageJson.scripts) packageJson.scripts = {};
     if (!packageJson.scripts.build) packageJson.scripts.build = "npx tsc";
-    if (!packageJson.scripts.dev) packageJson.scripts.dev = "nodemon src/index.ts"
+    if (!packageJson.scripts.dev) packageJson.scripts.dev = "nodemon index.ts"
     if (!packageJson.scripts.start) packageJson.scripts.start = "node dist/index.js";
-    packageJsonContent = JSON.stringify(packageJsonContent);
+    packageJsonContent = JSON.stringify(packageJson);
     fs.writeFileSync('package.json', packageJsonContent);
     // ---------------------------------------
     process.chdir('..');
@@ -116,8 +116,6 @@ export function start(config: MidConfig)
 {
     setupNode([], config.paths?.server ?? 'server');
     setupNode([], config.paths?.app ?? 'app');
-    const serverPath = createDirIfNotExistent(`./${config.paths?.server ?? 'server'}`);
-    const appPath = createDirIfNotExistent(`./${config.paths?.app ?? 'app'}`);
     buildServer(config);
     buildApp(config);
 }
