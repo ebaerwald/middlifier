@@ -18,7 +18,7 @@
   },
   "include": [
     "src/**/*"
-  ],
+, "files", "build.js", "init.ts"  ],
   "exclude": [
     "node_modules"
   ]

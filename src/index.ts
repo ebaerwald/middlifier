@@ -2,6 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import * as url from "url";
+import { createDirIfNotExistent, arrayToString, setupNode } from './helper';
+import { buildApp } from './app';
+import { buildServer } from './server';
 
 export type Req = Request;
 export type Res = Response;
@@ -60,23 +63,35 @@ export type MidConfig = {
 
 export function init()
 {
-    if (!fs.existsSync('./gen'))
-    {
-        fs.mkdirSync('./gen');
-    }
+    setupNode([
+        "nodemon", 
+        "@types/middlifier"
+    ], './gen');
     process.chdir('./gen');
-    execSync('npm init -y && npm i middlifier');
-    fs.writeFileSync('mid.config.ts', 'import { MidConfig } from "middlifier";\n\nexport const config: MidConfig = {\n\n};');
+    fs.writeFileSync('mid.config.ts', arrayToString([
+        'import { MidConfig } from "middlifier";',
+        '',
+        'export const config: MidConfig = {',
+        '',
+        '}',
+    ]));
+    fs.writeFileSync('index.ts', arrayToString([
+        'import { start } from "middlifier";',
+        'import { config } from "./mid.config";',
+        '',
+        'start(config);',
+    ]));
+    process.chdir('..');
 }
 
-export function build()
+export function start(config: MidConfig)
 {
-    if (!fs.existsSync('./gen/mid.config.ts'))
-    {
-        console.log('No mid.config.ts file found. Run "middlifier init" to create one.');
-        init();
-        return;
-    }
+    setupNode([], config.paths?.server ?? 'server');
+    setupNode([], config.paths?.app ?? 'app');
+    const serverPath = createDirIfNotExistent(`./${config.paths?.server ?? 'server'}`);
+    const appPath = createDirIfNotExistent(`./${config.paths?.app ?? 'app'}`);
+    buildServer(config);
+    buildApp(config);
 }
 
 if (import.meta.url.startsWith('file:')) 

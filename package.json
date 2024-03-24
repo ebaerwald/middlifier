@@ -13,16 +13,13 @@
     "start-build": "npm run build && node ./dist/index.js",
     "w-delete": "rmdir /s /q dist gen",
     "l-delete": "rm -rf dist gen",
-    "build": "tsc && node ./src/build.js",
-    "generate": "node ./dist/build.js",
-    "generate-build": "npm run build && node ./dist/build.js"
+    "build": "tsc && node build.js"
   },
   "keywords": [],
   "author": "ebaerwald",
   "license": "ISC",
   "bin": {
-    "middlifier-init": "./dist/init.js",
-    "middlifier-build": "./dist/build.js"
+    "middlifier-init": "./dist/init.js"
   },
   "devDependencies": {
     "@tsconfig/node-lts": "^18.12.5",
