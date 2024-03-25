@@ -27,7 +27,7 @@ function getAllPossibleImports(folderPath)
                 const fullPath = fPath.replace(folderPath, '.') + '/' + fileName;
                 if (fPath.split('/').length == 2)
                 {
-                    if (fileName !== 'index' && fileName !== 'bin')
+                    if (![].includes(fileName))
                     {
                         for (const path of getAllPaths(fullPath))
                         {

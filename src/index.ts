@@ -1,62 +1,123 @@
-import chalk from "chalk";
+import { Request, Response, NextFunction } from 'express';
+import { execSync } from 'child_process';
+import fs from 'fs';
 import * as url from "url";
-import jsonObj from './middlifier.config.json' assert {type: 'json'};
-import buildBackend from "./backend/index";
-import buildMiddleware from "./middleware/index";
-import { input } from "./helper";
+import { createDirIfNotExistent, arrayToString, setupNode } from './helper';
+import { buildApp } from './app';
+import { buildServer } from './server';
 
-export default function main()
+export type Req = Request;
+export type Res = Response;
+export type NextFunc = NextFunction;
+export type MidFunc = (req: Req, res: Res, next: NextFunc) => any;
+export type Func = (req: Req, res: Res) => any;
+export type TypeString = 'string' | 'number' | 'boolean' | 'object' | 'array';
+export type ReqConfig = {
+    body?: {
+        [key: string]: TypeString | { type: TypeString, required: boolean };
+    };
+    params?: {
+        urlEncoded?: boolean; 
+        [key: string]: TypeString | { type: TypeString, required: boolean } | boolean | undefined;
+    };
+};
+export type ResConfig = {};
+export type Service = {
+    req?: ReqConfig;
+    res?: ResConfig;
+    [key: string]: Func | ReqConfig | ResConfig | undefined;
+};
+export type Controller = {
+    get?: Service;
+    post?: Service;
+    put?: Service;
+    delete?: Service;
+    patch?: Service;
+    options?: Service;
+    head?: Service;
+    connect?: Service;
+    trace?: Service;
+    type?: TypeString; // dynamic route type
+};
+export type MidConfig = {
+    language?: string;
+    port: number;
+    host?: string;
+    ssl?: boolean;
+    cors?: boolean;
+    paths?: {
+        app?: string;
+        server?: string;
+    }
+    routes?: {
+        [key: string]: Controller | {
+            [key: string]: Controller | {
+                [key: string]: Controller | {
+                    [key: string]: Controller;
+                };
+            };
+        };
+    }
+    middlewares?: Service;
+}
+
+export function init()
 {
-    console.log(chalk.blue("Welcome to Middlifier! 🎉\n"));
-    setTimeout(async () => {
+    setupNode([
+        "nodemon", 
+        "middlifier"
+    ], './gen');
+    process.chdir('./gen');
+    fs.writeFileSync('mid.config.ts', arrayToString([
+        'import { MidConfig } from "middlifier";',
+        '',
+        'export const config: MidConfig = {',
+        '   port: 4000,',
+        '}',
+    ]));
+    fs.writeFileSync('index.ts', arrayToString([
+        'import { start } from "middlifier";',
+        'import { config } from "./mid.config";',
+        '',
+        'start(config);',
+    ]));
+    // nodemon.json
+    fs.writeFileSync('nodemon.json', arrayToString([
+        '{',
+        '   "ext": "ts",',
+        '   "ignore": [".git", "node_modules/**/node_modules", "./**/*.spec.ts"],',
+        '   "execMap": {',
+        '       "ts": "node --require ts-node/register"',
+        '   },',
+        '   "watch": ["./"]',
+        '}'
+    ]));
+    // ---------------------------------------
+    // tsconfig.json
+    execSync("npx tsc --init");
+    let tsconfigContent = fs.readFileSync('tsconfig.json', { encoding: 'utf-8', flag: 'r' });
+    tsconfigContent = tsconfigContent.replace('// "outDir": "./"', '"outDir": "./dist"');
+    fs.writeFileSync('tsconfig.json', tsconfigContent);
+    // ---------------------------------------
+    // package.json
+    let packageJsonContent = fs.readFileSync('package.json', { encoding: 'utf-8', flag: 'r' });
+    let packageJson = JSON.parse(packageJsonContent);
+    if (!packageJson.scripts) packageJson.scripts = {};
+    if (!packageJson.scripts.build) packageJson.scripts.build = "npx tsc";
+    if (!packageJson.scripts.dev) packageJson.scripts.dev = "nodemon index.ts"
+    if (!packageJson.scripts.start) packageJson.scripts.start = "node dist/index.js";
+    packageJsonContent = JSON.stringify(packageJson);
+    fs.writeFileSync('package.json', packageJsonContent);
+    // ---------------------------------------
+    process.chdir('..');
+}
 
-        console.log('Current Directory: ' + process.cwd());
-        let answer = input('Are you in the root folder? ' + chalk.bold('(y/n) '));
-        while (answer.toLowerCase() !== 'y')
-        {
-            console.log(chalk.redBright.bold('✖ ') + 'Please navigate to the root folder of your project!');
-            answer = input('');
-            const directory = answer.split(' ')[1];
-            try 
-            {
-                if (typeof directory === 'string') process.chdir(directory);
-            }
-            catch (err: any)
-            {
-                console.error(chalk.redBright.bold(err));
-            }
-            console.log('Current Directory: ' + process.cwd());
-            answer = input('Are you at the root folder? ' + chalk.bold('(y/n) '));
-        }
-        let lang;
-        if (jsonObj)
-        {
-            if (jsonObj.language)
-            {
-                lang = jsonObj.language;
-            }
-            else
-            {   
-                lang = input('Would you like to use TypeScript in your project? ' + chalk.bold('(y/n) ')).toLowerCase() === 'y' ? 'ts' : 'js';
-            }
-
-            console.log('');
-            answer = input('You have a middlifier.config.json file in your project. Would you like to use it? ' + chalk.bold('(y/n) '));
-            if (answer.toLowerCase() === 'y') 
-            {
-                const backend = jsonObj.backend || null;
-                await buildBackend(backend, lang);
-                const middleware = jsonObj.middleware || null;
-                await buildMiddleware(middleware, lang);
-            } 
-            else
-            {
-                await buildBackend(null, lang);
-                await buildMiddleware(null, lang);
-            }
-            console.log(chalk.greenBright.bold('✔ ') + 'Middlifier has finished building your project!');
-        }
-    }, 500);
+export function start(config: MidConfig)
+{
+    setupNode([], config.paths?.server ?? 'server');
+    setupNode([], config.paths?.app ?? 'app');
+    buildServer(config);
+    buildApp(config);
 }
 
 if (import.meta.url.startsWith('file:')) 
@@ -64,6 +125,6 @@ if (import.meta.url.startsWith('file:'))
     const modulePath = url.fileURLToPath(import.meta.url);
     if (process.argv[1] === modulePath) 
     { 
-        main();
+        init();
     }
 }
