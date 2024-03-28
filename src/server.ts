@@ -1,18 +1,12 @@
-import { MidConfig } from "./index";
-import { setupNode } from "./helper";
+import { MidConfig } from "./index.js";
 import fs from 'fs';
-import { arrayToString, createDirIfNotExistent } from "./helper";
+import { arrayToString, createDirIfNotExistent } from "./helper.js";
 import { execSync } from 'child_process';
 
 export function buildServer(config: MidConfig)
 {
     const serverPath = config.paths?.server ?? './server';
-    setupNode([
-        "typescript",
-        "express"
-    ], serverPath);
     process.chdir(serverPath);
-    // package.json
     let packageJsonContent = fs.readFileSync('package.json', { encoding: 'utf-8', flag: 'r' });
     let packageJson = JSON.parse(packageJsonContent);
     if (!packageJson.scripts) packageJson.scripts = {};
