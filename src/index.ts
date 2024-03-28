@@ -2,9 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import * as url from "url";
-import { createDirIfNotExistent, arrayToString, setupNode } from './helper';
-import { buildApp } from './app';
-import { buildServer } from './server';
+import { createDirIfNotExistent, arrayToString, setupNode } from './helper.js';
+import { buildApp } from './app.js';
+import { buildServer } from './server.js';
 
 export type Req = Request;
 export type Res = Response;
@@ -68,19 +68,6 @@ export function init()
         "middlifier"
     ], './gen');
     process.chdir('./gen');
-    fs.writeFileSync('mid.config.ts', arrayToString([
-        'import { MidConfig } from "middlifier";',
-        '',
-        'export const config: MidConfig = {',
-        '   port: 4000,',
-        '}',
-    ]));
-    fs.writeFileSync('index.ts', arrayToString([
-        'import { start } from "middlifier";',
-        'import { config } from "./mid.config";',
-        '',
-        'start(config);',
-    ]));
     // nodemon.json
     fs.writeFileSync('nodemon.json', arrayToString([
         '{',
@@ -95,21 +82,51 @@ export function init()
     // ---------------------------------------
     // tsconfig.json
     execSync("npx tsc --init");
-    let tsconfigContent = fs.readFileSync('tsconfig.json', { encoding: 'utf-8', flag: 'r' });
-    tsconfigContent = tsconfigContent.replace('// "outDir": "./"', '"outDir": "./dist"');
-    fs.writeFileSync('tsconfig.json', tsconfigContent);
+    fs.writeFileSync('tsconfig.json', arrayToString([
+        '{',
+        '   "compilerOptions": {',
+        '       "target": "ESNext",',
+        '       "module": "NodeNext",',
+        '       "outDir": "./dist",',
+        '       "declaration": true,',
+        '       "strict": true,',
+        '       "esModuleInterop": true,',
+        '       "moduleResolution": "NodeNext",',
+        '   },',
+        '   "include": ["./**/*"],',
+        '   "exclude": ["node_modules", "**/node_modules/*"]',
+        '}'
+    ]));
     // ---------------------------------------
     // package.json
     let packageJsonContent = fs.readFileSync('package.json', { encoding: 'utf-8', flag: 'r' });
     let packageJson = JSON.parse(packageJsonContent);
-    if (!packageJson.scripts) packageJson.scripts = {};
-    if (!packageJson.scripts.build) packageJson.scripts.build = "npx tsc";
-    if (!packageJson.scripts.dev) packageJson.scripts.dev = "nodemon index.ts"
-    if (!packageJson.scripts.start) packageJson.scripts.start = "node dist/index.js";
+    packageJson.type = "module";
+    packageJson.main = "dist/index.js";
+    packageJson.types = "dist/index.d.ts";
+    packageJson.files = ["/dist"];
+    packageJson.scripts = {};
+    packageJson.scripts.build = "npx tsc";
+    packageJson.scripts.dev = "npm run build && nodemon index.ts"
+    packageJson.scripts.start = "node dist/index.js";
     packageJsonContent = JSON.stringify(packageJson);
     fs.writeFileSync('package.json', packageJsonContent);
     // ---------------------------------------
-    process.chdir('..');
+    createDirIfNotExistent('./src');
+    process.chdir('./src');
+    fs.writeFileSync('mid.config.ts', arrayToString([
+        'import { MidConfig } from "middlifier";',
+        '',
+        'export const config: MidConfig = {',
+        '   port: 4000,',
+        '}',
+    ]));
+    fs.writeFileSync('index.ts', arrayToString([
+        'import { start } from "middlifier";',
+        'import { config } from "./mid.config.js";',
+        '',
+        'start(config);',
+    ]));
 }
 
 export function start(config: MidConfig)

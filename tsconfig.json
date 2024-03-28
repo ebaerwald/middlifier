@@ -1,25 +1,18 @@
 {
   "compilerOptions": {
-    "target": "es6",
-    "module": "esnext",
-    "lib": ["esnext", "dom", "dom.iterable"],
-    "moduleResolution": "node",
+    "module": "NodeNext",
+    "target": "esnext",
     "declaration": true,
     "outDir": "./dist",
     "esModuleInterop": true,
+    "moduleResolution": "NodeNext",
     "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "noImplicitReturns": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitAny": true,
-    "removeComments": false,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
   },
   "include": [
     "src/**/*"
-, "files", "build.js", "init.ts"  ],
+  ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "**/node_modules/*",
   ]
 }

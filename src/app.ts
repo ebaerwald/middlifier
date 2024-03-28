@@ -1,6 +1,5 @@
-import { MidConfig } from "./index";
-import { createDirIfNotExistent, setupNode, arrayToString } from "./helper";
-import fs from 'fs';
+import { MidConfig } from "./index.js";
+import { createDirIfNotExistent } from "./helper.js";
 
 export function buildApp(config: MidConfig)
 {
