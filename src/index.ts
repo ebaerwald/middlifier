@@ -65,7 +65,8 @@ export function init()
 {
     setupNode([
         "nodemon", 
-        "middlifier"
+        "middlifier",
+        "typescript"
     ], './gen');
     process.chdir('./gen');
     // nodemon.json
@@ -131,7 +132,11 @@ export function init()
 
 export function start(config: MidConfig)
 {
-    setupNode([], config.paths?.server ?? 'server');
+    setupNode([
+        "express",
+        "nodemon",
+        "cors"
+    ], config.paths?.server ?? 'server');
     setupNode([], config.paths?.app ?? 'app');
     buildServer(config);
     buildApp(config);
