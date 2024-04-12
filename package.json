@@ -1,6 +1,6 @@
 {
   "name": "middlifier",
-  "version": "1.0.26",
+  "version": "1.0.74",
   "description": "Middlifier provides a command where you can give instructions to build a general backend and middleware template.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,8 +12,9 @@
     "start": "node ./dist/index.js",
     "start-build": "npm run build && node ./dist/index.js",
     "w-delete": "rmdir /s /q dist gen",
-    "l-delete": "rm -rf dist gen",
-    "build": "npx tsc"
+    "delete": "rm -rf dist gen",
+    "build": "npx tsc",
+    "publishLib": "node ./publish.js"
   },
   "keywords": [],
   "author": "ebaerwald",

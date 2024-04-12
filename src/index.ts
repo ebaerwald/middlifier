@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import * as url from "url";
-import { createDirIfNotExistent, arrayToString, setupNode } from './helper.js';
+import { createDirIfNotExistent, arrayToString, setupNode, navigateTo } from './helper.js';
 import { buildApp } from './app.js';
 import { buildServer } from './server.js';
 import type { Config } from 'drizzle-kit';
@@ -76,7 +76,7 @@ export function init()
         "middlifier",
         "typescript"
     ], './gen');
-    process.chdir('./gen');
+    navigateTo('./gen', 'In index.ts, Line 79');
     // nodemon.json
     fs.writeFileSync('nodemon.json', arrayToString([
         '{',
@@ -85,7 +85,7 @@ export function init()
         '   "execMap": {',
         '       "ts": "node --require ts-node/register"',
         '   },',
-        '   "watch": ["./"]',
+        '   "watch": ["./src"]',
         '}'
     ]));
     // ---------------------------------------
@@ -102,7 +102,7 @@ export function init()
         '       "esModuleInterop": true,',
         '       "moduleResolution": "NodeNext",',
         '   },',
-        '   "include": ["./**/*"],',
+        '   "include": ["src/**/*"],',
         '   "exclude": ["node_modules", "**/node_modules/*"]',
         '}'
     ]));
@@ -118,11 +118,12 @@ export function init()
     packageJson.scripts.build = "npx tsc";
     packageJson.scripts.dev = "npm run build && nodemon index.ts"
     packageJson.scripts.start = "node dist/index.js";
-    packageJsonContent = JSON.stringify(packageJson);
-    fs.writeFileSync('package.json', packageJsonContent);
+    packageJsonContent = JSON.stringify(packageJson, null, 2);
+    const formattedJson = packageJsonContent.replace(/\\/g, '\\\\');
+    fs.writeFileSync('package.json', formattedJson);
     // ---------------------------------------
     createDirIfNotExistent('./src');
-    process.chdir('./src');
+    navigateTo('./src', 'In index.ts, Line 125');
     fs.writeFileSync('mid.config.ts', arrayToString([
         'import { MidConfig } from "middlifier";',
         '',
@@ -147,6 +148,7 @@ export function end(app: string, server: string)
 
 export function start(config: MidConfig)
 {
+    console.log('Current working directory: ', process.cwd());
     setupNode([
         "express",
         "nodemon",

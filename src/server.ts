@@ -1,20 +1,21 @@
 import { MidConfig } from "./index.js";
 import fs from 'fs';
-import { arrayToString, createDirIfNotExistent } from "./helper.js";
+import { arrayToString, createDirIfNotExistent, navigateTo } from "./helper.js";
 import { execSync } from 'child_process';
 
 export function buildServer(config: MidConfig)
 {
     const serverPath = config.paths?.server ?? './server';
-    process.chdir(serverPath);
+    navigateTo(serverPath, 'In server.ts, Line 9');
     let packageJsonContent = fs.readFileSync('package.json', { encoding: 'utf-8', flag: 'r' });
     let packageJson = JSON.parse(packageJsonContent);
-    if (!packageJson.scripts) packageJson.scripts = {};
+    packageJson.scripts = {};
     if (!packageJson.scripts.build) packageJson.scripts.build = "npx tsc";
     if (!packageJson.scripts.dev) packageJson.scripts.dev = "nodemon src/index.ts"
     if (!packageJson.scripts.start) packageJson.scripts.start = "node dist/index.js";
-    packageJsonContent = JSON.stringify(packageJsonContent);
-    fs.writeFileSync('package.json', packageJsonContent);
+    packageJsonContent = JSON.stringify(packageJson, null, 2);
+    const formattedJson = packageJsonContent.replace(/\\/g, '\\\\');
+    fs.writeFileSync('package.json', formattedJson);
     // ---------------------------------------
     // tsconfig.json
     execSync("npx tsc --init");
@@ -29,12 +30,13 @@ export function buildServer(config: MidConfig)
         '   "ignore": [".git", "node_modules/**/node_modules", "src/**/*.spec.ts"],',
         '   "execMap": {',
         '       "ts": "node --require ts-node/register"',
-        '   "},',
+        '   },',
         '   "watch": ["src/"]',
         '}'
     ]));
     // ---------------------------------------
     // drizzle.config
+    console.log("Drizzle config: " + config.drizzle);
     if (config.drizzle)
     {
         const drizzleConfig = JSON.stringify(config.drizzle).split('\n');
@@ -49,5 +51,6 @@ export function buildServer(config: MidConfig)
     // dockerfile
     // ---------------------------------------
     createDirIfNotExistent('./src');
-    process.chdir('./src');
+    navigateTo('./src', 'In server.ts, Line 52');
+    navigateTo('../..', 'In server.ts, Line 53');
 }
