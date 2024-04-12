@@ -34,6 +34,20 @@ export function buildServer(config: MidConfig)
         '}'
     ]));
     // ---------------------------------------
+    // drizzle.config
+    if (config.drizzle)
+    {
+        const drizzleConfig = JSON.stringify(config.drizzle).split('\n');
+        fs.writeFileSync('drizzle.config.ts', arrayToString([
+            'import type { Config } from "drizzle-kit";',
+            'export default {',
+            ...drizzleConfig,
+            '} satisfies Config'
+        ]));
+    }
+    // ---------------------------------------
+    // dockerfile
+    // ---------------------------------------
     createDirIfNotExistent('./src');
     process.chdir('./src');
 }

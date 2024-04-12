@@ -5,6 +5,7 @@ import * as url from "url";
 import { createDirIfNotExistent, arrayToString, setupNode } from './helper.js';
 import { buildApp } from './app.js';
 import { buildServer } from './server.js';
+import type { Config } from 'drizzle-kit';
 
 export type Req = Request;
 export type Res = Response;
@@ -39,6 +40,11 @@ export type Controller = {
     trace?: Service;
     type?: TypeString; // dynamic route type
 };
+export type DockerCommands = 'FROM' | 'RUN' | 'CMD' | 'LABEL' | 'EXPOSE' | 'ENV' | 'ADD' | 'COPY' | 'ENTRYPOINT' | 'VOLUME' | 'USER' | 'WORKDIR' | 'ARG' | 'ONBUILD' | 'STOPSIGNAL' | 'HEALTHCHECK' | 'SHELL';
+export type DockerConfig = [
+    DockerCommands,
+    string
+][];
 export type MidConfig = {
     language?: string;
     port: number;
@@ -59,6 +65,8 @@ export type MidConfig = {
         };
     }
     middlewares?: Service;
+    drizzle?: Config;
+    docker?: DockerConfig;
 }
 
 export function init()
@@ -128,6 +136,13 @@ export function init()
         '',
         'start(config);',
     ]));
+}
+
+export function end(app: string, server: string)
+{
+    fs.renameSync(`./gen/${app}`, `./${app}`);
+    fs.renameSync(`./gen/${server}`, `./${server}`);
+    fs.rmSync('./gen', { recursive: true });
 }
 
 export function start(config: MidConfig)
