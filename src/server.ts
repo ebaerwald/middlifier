@@ -72,8 +72,9 @@ export function buildServer(config: MidConfig)
         const dockerLines: string[] = [];
         for (const element of config.server?.docker)
         {
-            dockerLines.push(`${element[0]} ${element}`);
+            dockerLines.push(`${element[0]} ${element[1]}`);
         }
+        fs.writeFileSync('Dockerfile', arrayToString(dockerLines));
     }
     else
     {

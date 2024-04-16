@@ -52,6 +52,7 @@ export type MidConfig = {
     },
     server: {
         port: number,
+        path?: string,
         host?: string,
         ssl?: boolean,
         cors?: boolean,
@@ -69,6 +70,7 @@ export type MidConfig = {
         docker?: DockerConfig,
     },
     app: {
+        path?: string,
         docker?: DockerConfig,
     }
 }
@@ -132,8 +134,9 @@ export function init()
         'import { MidConfig } from "middlifier";',
         '',
         'export const config: MidConfig = {',
-        '   port: 4000,',
-        '   server: {}',
+        '   server: {',
+        '       port: 4000,',
+        '   },',
         '   app: {}',
         '}',
     ]));
