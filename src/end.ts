@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { end } from "./index.js";
+import { end } from "./index";
 const args = process.argv.slice(2);
 let app = 'app';
 let server = 'server';

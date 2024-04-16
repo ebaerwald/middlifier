@@ -1,16 +1,15 @@
 {
   "name": "middlifier",
-  "version": "1.0.74",
+  "version": "1.0.88",
   "description": "Middlifier provides a command where you can give instructions to build a general backend and middleware template.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "type": "module",
   "files": [
     "/dist"
   ],
   "scripts": {
-    "start": "node ./dist/index.js",
-    "start-build": "npm run build && node ./dist/index.js",
+    "start": "node ./dist/init.js",
+    "start-build": "npm run build && node ./dist/init.js",
     "w-delete": "rmdir /s /q dist gen",
     "delete": "rm -rf dist gen",
     "build": "npx tsc",

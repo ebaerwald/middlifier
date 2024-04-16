@@ -1,7 +1,7 @@
-import { MidConfig } from "./index.js";
-import fs from 'fs';
-import { arrayToString, createDirIfNotExistent, navigateTo } from "./helper.js";
-import { execSync } from 'child_process';
+import { MidConfig } from "./index";
+const fs = require('fs');
+import { arrayToString, createDirIfNotExistent, navigateTo } from "./helper";
+const { execSync } = require('child_process');
 
 export function buildServer(config: MidConfig)
 {

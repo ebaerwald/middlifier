@@ -1,15 +1,15 @@
-import { Request, Response, NextFunction } from 'express';
-import { execSync } from 'child_process';
-import fs from 'fs';
-import * as url from "url";
-import { createDirIfNotExistent, arrayToString, setupNode, navigateTo } from './helper.js';
-import { buildApp } from './app.js';
-import { buildServer } from './server.js';
-import type { Config } from 'drizzle-kit';
+const express = require('express');
+const { Request, Response, NextFunction } = express;
+const { execSync } = require('child_process');
+const fs = require('fs');
+import { createDirIfNotExistent, arrayToString, setupNode, navigateTo } from './helper';
+import { buildApp } from './app';
+import { buildServer } from './server';
+const { Config } = require('drizzle-kit');
 
 export type Req = Request;
 export type Res = Response;
-export type NextFunc = NextFunction;
+export type NextFunc = typeof NextFunction;
 export type MidFunc = (req: Req, res: Res, next: NextFunc) => any;
 export type Func = (req: Req, res: Res) => any;
 export type TypeString = 'string' | 'number' | 'boolean' | 'object' | 'array';
@@ -65,7 +65,7 @@ export type MidConfig = {
         };
     }
     middlewares?: Service;
-    drizzle?: Config;
+    drizzle?: typeof Config;
     docker?: DockerConfig;
 }
 
@@ -74,7 +74,8 @@ export function init()
     setupNode([
         "nodemon", 
         "middlifier",
-        "typescript"
+        "typescript",
+        "ts-node",
     ], './gen');
     navigateTo('./gen', 'In index.ts, Line 79');
     // nodemon.json
@@ -94,13 +95,13 @@ export function init()
     fs.writeFileSync('tsconfig.json', arrayToString([
         '{',
         '   "compilerOptions": {',
-        '       "target": "ESNext",',
-        '       "module": "NodeNext",',
+        '       "target": "ES2022",',
+        '       "module": "CommonJS",',
         '       "outDir": "./dist",',
         '       "declaration": true,',
         '       "strict": true,',
         '       "esModuleInterop": true,',
-        '       "moduleResolution": "NodeNext",',
+        '       "moduleResolution": "Node",',
         '   },',
         '   "include": ["src/**/*"],',
         '   "exclude": ["node_modules", "**/node_modules/*"]',
@@ -110,13 +111,12 @@ export function init()
     // package.json
     let packageJsonContent = fs.readFileSync('package.json', { encoding: 'utf-8', flag: 'r' });
     let packageJson = JSON.parse(packageJsonContent);
-    packageJson.type = "module";
-    packageJson.main = "dist/index.js";
+    packageJson.main = "src/index.ts";
     packageJson.types = "dist/index.d.ts";
     packageJson.files = ["/dist"];
     packageJson.scripts = {};
     packageJson.scripts.build = "npx tsc";
-    packageJson.scripts.dev = "npm run build && nodemon index.ts"
+    packageJson.scripts.dev = "npx nodemon src/index.ts"
     packageJson.scripts.start = "node dist/index.js";
     packageJsonContent = JSON.stringify(packageJson, null, 2);
     const formattedJson = packageJsonContent.replace(/\\/g, '\\\\');
@@ -133,10 +133,11 @@ export function init()
     ]));
     fs.writeFileSync('index.ts', arrayToString([
         'import { start } from "middlifier";',
-        'import { config } from "./mid.config.js";',
+        'import { config } from "./mid.config";',
         '',
         'start(config);',
     ]));
+    process.exit(0);
 }
 
 export function end(app: string, server: string)
@@ -144,6 +145,7 @@ export function end(app: string, server: string)
     fs.renameSync(`./gen/${app}`, `./${app}`);
     fs.renameSync(`./gen/${server}`, `./${server}`);
     fs.rmSync('./gen', { recursive: true });
+    process.exit(0);
 }
 
 export function start(config: MidConfig)
@@ -157,13 +159,5 @@ export function start(config: MidConfig)
     setupNode([], config.paths?.app ?? 'app');
     buildServer(config);
     buildApp(config);
-}
-
-if (import.meta.url.startsWith('file:')) 
-{ 
-    const modulePath = url.fileURLToPath(import.meta.url);
-    if (process.argv[1] === modulePath) 
-    { 
-        init();
-    }
+    process.exit(0);
 }

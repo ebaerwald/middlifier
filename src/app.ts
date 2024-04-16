@@ -1,5 +1,5 @@
-import { navigateTo } from "./helper.js";
-import { MidConfig } from "./index.js";
+import { navigateTo } from "./helper";
+import { MidConfig } from "./index";
 
 export function buildApp(config: MidConfig)
 {
