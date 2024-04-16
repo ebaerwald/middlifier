@@ -23,4 +23,5 @@ fs.writeFileSync('package.json', formattedJson);
 
 execSync('npm publish', { stdio: 'inherit' });
 console.log('Published successfully!');
+execSync('npm start');
 process.exit(0);

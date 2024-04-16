@@ -1,15 +1,14 @@
-const express = require('express');
-const { Request, Response, NextFunction } = express;
-const { execSync } = require('child_process');
-const fs = require('fs');
+import { Request, Response, NextFunction } from 'express';
+import { execSync } from 'child_process';
+import fs from 'fs';
 import { createDirIfNotExistent, arrayToString, setupNode, navigateTo } from './helper';
 import { buildApp } from './app';
 import { buildServer } from './server';
-const { Config } = require('drizzle-kit');
+import type { Config } from 'drizzle-kit';
 
 export type Req = Request;
 export type Res = Response;
-export type NextFunc = typeof NextFunction;
+export type NextFunc = NextFunction;
 export type MidFunc = (req: Req, res: Res, next: NextFunc) => any;
 export type Func = (req: Req, res: Res) => any;
 export type TypeString = 'string' | 'number' | 'boolean' | 'object' | 'array';
@@ -46,27 +45,32 @@ export type DockerConfig = [
     string
 ][];
 export type MidConfig = {
-    language?: string;
-    port: number;
-    host?: string;
-    ssl?: boolean;
-    cors?: boolean;
+    language?: string,
     paths?: {
-        app?: string;
-        server?: string;
-    }
-    routes?: {
-        [key: string]: Controller | {
+        app?: string,
+        server?: string,
+    },
+    server: {
+        port: number,
+        host?: string,
+        ssl?: boolean,
+        cors?: boolean,
+        routes?: {
             [key: string]: Controller | {
                 [key: string]: Controller | {
-                    [key: string]: Controller;
+                    [key: string]: Controller | {
+                        [key: string]: Controller
+                    };
                 };
             };
-        };
+        }
+        middlewares?: Service,
+        drizzle?: Config
+        docker?: DockerConfig,
+    },
+    app: {
+        docker?: DockerConfig,
     }
-    middlewares?: Service;
-    drizzle?: typeof Config;
-    docker?: DockerConfig;
 }
 
 export function init()
@@ -129,6 +133,8 @@ export function init()
         '',
         'export const config: MidConfig = {',
         '   port: 4000,',
+        '   server: {}',
+        '   app: {}',
         '}',
     ]));
     fs.writeFileSync('index.ts', arrayToString([

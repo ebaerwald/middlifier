@@ -1,7 +1,7 @@
 import { MidConfig } from "./index";
-const fs = require('fs');
+import fs from 'fs';
 import { arrayToString, createDirIfNotExistent, navigateTo } from "./helper";
-const { execSync } = require('child_process');
+import { execSync } from 'child_process';
 
 export function buildServer(config: MidConfig)
 {
@@ -20,7 +20,7 @@ export function buildServer(config: MidConfig)
     // tsconfig.json
     execSync("npx tsc --init");
     let tsconfigContent = fs.readFileSync('tsconfig.json', { encoding: 'utf-8', flag: 'r' });
-    tsconfigContent = tsconfigContent.replace('// "outDir": "./"', '"outdir": "./dist');
+    tsconfigContent = tsconfigContent.replace('// "outDir": "./"', '"outDir": "./dist"');
     fs.writeFileSync('tsconfig.json', tsconfigContent);
     // ---------------------------------------
     // nodemon.json
@@ -36,19 +36,53 @@ export function buildServer(config: MidConfig)
     ]));
     // ---------------------------------------
     // drizzle.config
-    console.log("Drizzle config: " + config.drizzle);
-    if (config.drizzle)
+    if (config.server?.drizzle)
     {
-        const drizzleConfig = JSON.stringify(config.drizzle).split('\n');
+        const drizzleLines: string[] = [];
+        for (const key in config.server?.drizzle)
+        {
+            const element = config.server.drizzle[key as keyof typeof config.server.drizzle] as any;
+            if (typeof element === 'string')
+            {
+                drizzleLines.push(`    ${key}: "${element}",`);
+            }
+            else
+            {
+                drizzleLines.push(`    ${key}: ${JSON.stringify(element)},`);
+            }
+        }
         fs.writeFileSync('drizzle.config.ts', arrayToString([
             'import type { Config } from "drizzle-kit";',
             'export default {',
-            ...drizzleConfig,
+            ...drizzleLines,
             '} satisfies Config'
         ]));
     }
+    else
+    {
+        if (fs.existsSync('drizzle.config.ts'))
+        {
+            fs.unlinkSync('drizzle.config.ts');
+        }
+    }
     // ---------------------------------------
     // dockerfile
+    if (config.server?.docker)
+    {
+        const dockerLines: string[] = [];
+        for (const element of config.server?.docker)
+        {
+            dockerLines.push(`${element[0]} ${element}`);
+        }
+    }
+    else
+    {
+        if (fs.existsSync('Dockerfile'))
+        {
+            fs.unlinkSync('Dockerfile');
+        }
+    
+    }
     // ---------------------------------------
     createDirIfNotExistent('./src');
     navigateTo('./src', 'In server.ts, Line 52');
