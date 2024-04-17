@@ -5,7 +5,7 @@ import { execSync } from 'child_process';
 
 export function buildServer(config: MidConfig)
 {
-    const serverPath = config.paths?.server ?? './server';
+    const serverPath = config.server.path ?? './server';
     navigateTo(serverPath, 'In server.ts, Line 9');
     let packageJsonContent = fs.readFileSync('package.json', { encoding: 'utf-8', flag: 'r' });
     let packageJson = JSON.parse(packageJsonContent);
@@ -13,15 +13,29 @@ export function buildServer(config: MidConfig)
     if (!packageJson.scripts.build) packageJson.scripts.build = "npx tsc";
     if (!packageJson.scripts.dev) packageJson.scripts.dev = "nodemon src/index.ts"
     if (!packageJson.scripts.start) packageJson.scripts.start = "node dist/index.js";
+    if (!packageJson.scripts['db:generate']) packageJson.scripts['db:generate'] = "drizzle-kit generate:pg";
+    if (!packageJson.scripts['db:push']) packageJson.scripts['db:push'] = "drizzle-kit push:pg";
     packageJsonContent = JSON.stringify(packageJson, null, 2);
     const formattedJson = packageJsonContent.replace(/\\/g, '\\\\');
     fs.writeFileSync('package.json', formattedJson);
     // ---------------------------------------
     // tsconfig.json
     execSync("npx tsc --init");
-    let tsconfigContent = fs.readFileSync('tsconfig.json', { encoding: 'utf-8', flag: 'r' });
-    tsconfigContent = tsconfigContent.replace('// "outDir": "./"', '"outDir": "./dist"');
-    fs.writeFileSync('tsconfig.json', tsconfigContent);
+    fs.writeFileSync('tsconfig.json', arrayToString([
+        '{',
+        '   "compilerOptions": {',
+        '       "target": "ES2022",',
+        '       "module": "CommonJS",',
+        '       "outDir": "./dist",',
+        '       "declaration": true,',
+        '       "strict": true,',
+        '       "esModuleInterop": true,',
+        '       "moduleResolution": "Node",',
+        '   },',
+        '   "include": ["src/**/*"],',
+        '   "exclude": ["node_modules", "**/node_modules/*"]',
+        '}'
+    ]));
     // ---------------------------------------
     // nodemon.json
     fs.writeFileSync('nodemon.json', arrayToString([
@@ -87,5 +101,38 @@ export function buildServer(config: MidConfig)
     // ---------------------------------------
     createDirIfNotExistent('./src');
     navigateTo('./src', 'In server.ts, Line 52');
+    // db
+    createDirIfNotExistent('./db');
+    navigateTo('./db', 'In server.ts, Line 104');
+    fs.writeFileSync('db.ts', arrayToString([
+        `import { drizzle } from "drizzle-orm/node-${config.server.db?.type ?? "postgres"}";`,
+        'import Pool from "pg-pool";',
+        '',
+        `const pool = new Pool(${JSON.stringify(config.server.db?.config)});`,
+        '',
+        'export const db = drizzle(pool);',
+    ]));
+    if (config.server.db?.schemas)
+    {
+        createDirIfNotExistent('./schemas');
+        navigateTo('./schemas', 'In ser{`ver.ts, Line 110');
+        for (const key in config.server.db?.schemas)
+        {
+            fs.writeFileSync(`${key}.ts`, arrayToString([
+                'import { pgTable, serial, text } from "drizzle-orm/pg-core";',
+                '',
+                `export const ${key} = pgTable("${key}", ${JSON.stringify(config.server.db?.schemas[key])});`
+            ]));
+        }
+        navigateTo('..', 'In server.ts, Line 118');
+    }
+    else
+    {
+        if (fs.existsSync('schemas'))
+        {
+            fs.rmdirSync('schemas', { recursive: true });
+        }
+    }
+    // ---------------------------------------
     navigateTo('../..', 'In server.ts, Line 53');
 }

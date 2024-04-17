@@ -5,6 +5,8 @@ import { createDirIfNotExistent, arrayToString, setupNode, navigateTo } from './
 import { buildApp } from './app';
 import { buildServer } from './server';
 import type { Config } from 'drizzle-kit';
+import { PoolConfig } from 'pg';
+// import { TableConfig } from 'drizzle-orm/pg-core';
 
 export type Req = Request;
 export type Res = Response;
@@ -46,10 +48,6 @@ export type DockerConfig = [
 ][];
 export type MidConfig = {
     language?: string,
-    paths?: {
-        app?: string,
-        server?: string,
-    },
     server: {
         port: number,
         path?: string,
@@ -64,6 +62,14 @@ export type MidConfig = {
                     };
                 };
             };
+        },
+        db?: {
+            type: 'postgres' | 'mysql' | 'sqlite' | 'mongoDB',
+            path?: string,
+            config?: PoolConfig,
+            schemas?: {
+                [key: string]: any
+            }
         }
         middlewares?: Service,
         drizzle?: Config
@@ -164,8 +170,8 @@ export function start(config: MidConfig)
         "express",
         "nodemon",
         "cors"
-    ], config.paths?.server ?? 'server');
-    setupNode([], config.paths?.app ?? 'app');
+    ], config.server.path ?? 'server');
+    setupNode([], config.server.path ?? 'app');
     buildServer(config);
     buildApp(config);
     process.exit(0);
