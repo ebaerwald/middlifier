@@ -1,5 +1,6 @@
 import { PoolConfig } from 'pg';
 import { Config } from 'drizzle-kit';
+import { Schema } from '..';
 
 export const drizzleConfigTemp = (config: Config) => {
     return [
@@ -18,4 +19,24 @@ export const dbConfigTemp = (config: PoolConfig) => {
         '',
         'export const db = drizzle(pool);',
     ]
+}
+
+export const schemaTemp = (schema: Schema, name: string) => {
+    const imports: string[] = [];
+    const schemaLines: string[] = [];
+    for (const key in schema)
+    {
+        if (!imports.includes(schema[key].type))
+        {
+            imports.push(schema[key].type);
+        }
+        schemaLines.push(`  ${key}: ${schema[key].type}('${schema[key].name}')${schema[key].primaryKey ? '.primaryKey()': ''},`);
+    }
+    return [
+        `import { pgTable, ${imports.join(', ')} } from "drizzle-orm/pg-core";`,
+        '',
+        `export const plans = pgTable('${name}', {`,
+        schemaLines.join('\n'),
+        '});',
+    ];
 }

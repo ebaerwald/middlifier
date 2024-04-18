@@ -46,6 +46,16 @@ export type DockerConfig = [
     DockerCommands,
     string
 ][];
+export type Schema = {
+    [key: string]: {
+        type: 'serial' | 'text' | 'integer' | 'real',
+        name: string,
+        primaryKey?: boolean
+    }
+};
+export type Schemas = {
+    [key: string]: Schema  
+}
 export type MidConfig = {
     language?: string,
     server: {
@@ -66,9 +76,7 @@ export type MidConfig = {
         drizzle?: {
             config: Config,
             dbConfig: PoolConfig,
-            schemas?: {
-                [key: string]: any
-            }
+            schemas?: Schemas
         },
         middlewares?: Service,
         docker?: DockerConfig,

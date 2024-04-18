@@ -1,8 +1,8 @@
-import { MidConfig } from "../index";
+import { MidConfig, Schema } from "../index";
 import fs from 'fs';
 import { arrayToString, createDirIfNotExistent } from "../helper";
 import { nodemonTemp, tsconfigTemp, packageTemp } from "../temp";
-import { dbConfigTemp, drizzleConfigTemp } from "./temp";
+import { dbConfigTemp, drizzleConfigTemp, schemaTemp } from "./temp";
 
 export function buildServer(config: MidConfig)
 {
@@ -62,11 +62,7 @@ export function buildServer(config: MidConfig)
         process.chdir('./schemas');
         for (const key in config.server.drizzle.schemas)
         {
-            fs.writeFileSync(`${key}.ts`, arrayToString([
-                'import { pgTable, serial, text } from "drizzle-orm/pg-core";',
-                '',
-                `export const ${key} = pgTable("${key}", ${JSON.stringify(config.server.drizzle.schemas[key])});`
-            ]));
+            fs.writeFileSync(`${key}.ts`, arrayToString(schemaTemp(config.server.drizzle.schemas[key], key)));
         }
         process.chdir('..');
     }
