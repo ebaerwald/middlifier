@@ -1,10 +1,10 @@
-import { MidConfig, Schema } from "../index";
+import { rMidConfig, rSchema } from "../index";
 import fs from 'fs';
 import { arrayToString, createDirIfNotExistent } from "../helper";
 import { nodemonTemp, tsconfigTemp, packageTemp } from "../temp";
-import { dbConfigTemp, drizzleConfigTemp, schemaTemp } from "./temp";
+import { dbConfigTemp, drizzleConfigTemp, schemaTemp, indexTemp } from "./temp";
 
-export function buildServer(config: MidConfig)
+export function buildServer(config: rMidConfig)
 {
     const serverPath = config.server.path ?? './server';
     process.chdir(serverPath);
@@ -31,7 +31,7 @@ export function buildServer(config: MidConfig)
             fs.unlinkSync('drizzle.config.ts');
         }
     }
-    if (config.server?.docker)
+    if (config.server.docker)
     {
         const dockerLines: string[] = [];
         for (const element of config.server?.docker)
@@ -48,8 +48,25 @@ export function buildServer(config: MidConfig)
         }
     
     }
+    if (config.server.secrets)
+    {
+        const envLines: string[] = [];
+        for (const key in config.server.secrets)
+        {
+            envLines.push(`${key}=${config.server.secrets[key]}`);
+        }
+        fs.writeFileSync('.env', arrayToString(envLines));
+    }
+    else
+    {
+        if (fs.existsSync('.env'))
+        {
+            fs.unlinkSync('.env');
+        }
+    }
     createDirIfNotExistent('./src');
     process.chdir('./src');
+    fs.writeFileSync('index.ts', arrayToString(indexTemp(config.server)));
     createDirIfNotExistent('./db');
     process.chdir('./db'); 
     if (config.server.drizzle)
@@ -73,6 +90,5 @@ export function buildServer(config: MidConfig)
             fs.rmdirSync('schemas', { recursive: true });
         }
     }
-    // console.log(process.cwd());
     process.chdir('../../..');
 }

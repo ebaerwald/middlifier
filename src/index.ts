@@ -1,4 +1,3 @@
-import { Request, Response, NextFunction } from 'express';
 import fs from 'fs';
 import { createDirIfNotExistent, arrayToString, setupNode } from './helper';
 import { buildApp } from './app/app';
@@ -6,86 +5,110 @@ import { buildServer } from './server/server';
 import type { Config } from 'drizzle-kit';
 import { PoolConfig } from 'pg';
 import { packageTemp, tsconfigTemp, nodemonTemp, midConfigTemp, indexTemp} from './temp';
-// import { TableConfig } from 'drizzle-orm/pg-core';
+import { OptionsJson, OptionsUrlencoded } from 'body-parser';
+import { CorsOptions } from 'cors';
 
-export type Req = Request;
-export type Res = Response;
-export type NextFunc = NextFunction;
-export type MidFunc = (req: Req, res: Res, next: NextFunc) => any;
-export type Func = (req: Req, res: Res) => any;
-export type TypeString = 'string' | 'number' | 'boolean' | 'object' | 'array';
-export type ReqConfig = {
+
+type ReqConfig = {
     body?: {
-        [key: string]: TypeString | { type: TypeString, required: boolean };
-    };
+        [key: string]: any | { type: any, required: boolean };
+    },
     params?: {
         urlEncoded?: boolean; 
-        [key: string]: TypeString | { type: TypeString, required: boolean } | boolean | undefined;
-    };
+        [key: string]: any | { type: any, required: boolean };
+    },
+    dynamicRoute?: string
 };
-export type ResConfig = {};
-export type Service = {
-    req?: ReqConfig;
-    res?: ResConfig;
-    [key: string]: Func | ReqConfig | ResConfig | undefined;
+type ResConfig = {};
+type MidFunc = {
+    func: MidFunc,
+    name: string,
+    method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD' | 'CONNECT' | 'TRACE',
+    req?: ReqConfig,
+    res?: ResConfig
+
+}
+type Handler = {
+    handlerFunc: MidFunc,
+    path?: string
 };
-export type Controller = {
-    get?: Service;
-    post?: Service;
-    put?: Service;
-    delete?: Service;
-    patch?: Service;
-    options?: Service;
-    head?: Service;
-    connect?: Service;
-    trace?: Service;
-    type?: TypeString; // dynamic route type
+type Handlers = {
+    obj: {
+        [key: string]: Handler
+    },
+    path?: string
 };
-export type DockerCommands = 'FROM' | 'RUN' | 'CMD' | 'LABEL' | 'EXPOSE' | 'ENV' | 'ADD' | 'COPY' | 'ENTRYPOINT' | 'VOLUME' | 'USER' | 'WORKDIR' | 'ARG' | 'ONBUILD' | 'STOPSIGNAL' | 'HEALTHCHECK' | 'SHELL';
-export type DockerConfig = [
+type Service = {
+    handlers?: Handlers,
+    serviceFunc?: MidFunc,
+    path?: string
+};
+type Services = {
+    obj: {
+        [key: string]: Service
+    }
+    path?: string
+};
+type Server = {
+    port: number | string, // if you get the variable from .env file
+    path?: string,
+    host?: string,
+    ssl?: boolean,
+    set?: {
+        [key: string]: any
+    },
+    cors?: CorsOptions,
+    services? : Services,
+    routes?: Routes,
+    json?: OptionsJson,
+    urlencoded?: OptionsUrlencoded,
+    drizzle?: {
+        config: Config,
+        dbConfig: PoolConfig,
+        schemas?: Schemas
+    },
+    secrets?: {
+        [key: string]: string
+    },
+    docker?: DockerConfig
+};
+export type rServer = Readonly<Server>;
+type App = {
+    path?: string,
+    docker?: DockerConfig,
+};
+export type rApp = Readonly<App>;
+type DockerCommands = 'FROM' | 'RUN' | 'CMD' | 'LABEL' | 'EXPOSE' | 'ENV' | 'ADD' | 'COPY' | 'ENTRYPOINT' | 'VOLUME' | 'USER' | 'WORKDIR' | 'ARG' | 'ONBUILD' | 'STOPSIGNAL' | 'HEALTHCHECK' | 'SHELL';
+type DockerConfig = [
     DockerCommands,
     string
 ][];
-export type Schema = {
+type Schema = {
     [key: string]: {
         type: 'serial' | 'text' | 'integer' | 'real',
         name: string,
         primaryKey?: boolean
     }
 };
-export type Schemas = {
+export type rSchema = Readonly<Schema>;
+type Schemas = {
     [key: string]: Schema  
-}
-export type MidConfig = {
-    language?: string,
-    server: {
-        port: number,
-        path?: string,
-        host?: string,
-        ssl?: boolean,
-        cors?: boolean,
-        routes?: {
-            [key: string]: Controller | {
-                [key: string]: Controller | {
-                    [key: string]: Controller | {
-                        [key: string]: Controller
-                    };
-                };
-            };
-        },
-        drizzle?: {
-            config: Config,
-            dbConfig: PoolConfig,
-            schemas?: Schemas
-        },
-        middlewares?: Service,
-        docker?: DockerConfig,
-    },
-    app: {
-        path?: string,
-        docker?: DockerConfig,
+};
+type Routes = {
+    [key: string]: Services | {
+        [key: string]: Services | {
+            [key: string]: Services | {
+                [key: string]: Services
+            }
+        }
     }
 }
+type MidConfig = {
+    language?: string,
+    server: Server,
+    app: App
+}
+export type rMidConfig = Readonly<MidConfig>;
 
 export function init()
 {
