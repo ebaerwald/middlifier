@@ -66,6 +66,7 @@ export function buildServer(config: rMidConfig)
     }
     createDirIfNotExistent('./src');
     process.chdir('./src');
+    createDirIfNotExistent('routes');
     fs.writeFileSync('index.ts', arrayToString(indexTemp(config.server)));
     createDirIfNotExistent('./db');
     process.chdir('./db'); 

@@ -7,6 +7,7 @@ import { PoolConfig } from 'pg';
 import { packageTemp, tsconfigTemp, nodemonTemp, midConfigTemp, indexTemp} from './temp';
 import { OptionsJson, OptionsUrlencoded } from 'body-parser';
 import { CorsOptions } from 'cors';
+import { RequestHandler } from 'express';
 
 
 type ReqConfig = {
@@ -20,37 +21,19 @@ type ReqConfig = {
     dynamicRoute?: string
 };
 type ResConfig = {};
-type MidFunc = {
-    func: MidFunc,
-    name: string,
+export type MidFunc = {
+    func: RequestHandler,
+    subFunc?: MidFunc,
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD' | 'CONNECT' | 'TRACE',
     req?: ReqConfig,
-    res?: ResConfig
-
-}
-type Handler = {
-    handlerFunc: MidFunc,
-    path?: string
+    res?: ResConfig,
+    path: string
 };
-type Handlers = {
-    obj: {
-        [key: string]: Handler
-    },
-    path?: string
-};
-type Service = {
-    handlers?: Handlers,
-    serviceFunc?: MidFunc,
-    path?: string
-};
-type Services = {
-    obj: {
-        [key: string]: Service
-    }
-    path?: string
+export type MidFuncs = {
+    [name: string]: MidFunc
 };
 type Server = {
-    port: number | string, // if you get the variable from .env file
+    port: number | string, // string if you get the variable from .env file
     path?: string,
     host?: string,
     ssl?: boolean,
@@ -58,8 +41,9 @@ type Server = {
         [key: string]: any
     },
     cors?: CorsOptions,
-    services? : Services,
-    routes?: Routes,
+    funcs: MidFuncs,
+    indexFuncNames?: string[],
+    routes?: FinalRoutes,
     json?: OptionsJson,
     urlencoded?: OptionsUrlencoded,
     drizzle?: {
@@ -94,14 +78,16 @@ export type rSchema = Readonly<Schema>;
 type Schemas = {
     [key: string]: Schema  
 };
-type Routes = {
-    [key: string]: Services | {
-        [key: string]: Services | {
-            [key: string]: Services | {
-                [key: string]: Services
-            }
-        }
-    }
+export type Routes = {
+    [key: string]: Routes | [
+        {
+            [key: string]: Routes
+        },
+        [string] | [string, string] // path of the router and name of midfunction 
+    ]
+};
+export type FinalRoutes = {
+    [key: string]: Routes
 }
 type MidConfig = {
     language?: string,
@@ -135,7 +121,7 @@ export function end(app: string, server: string)
 
 export function start(config: MidConfig)
 {
-    setupNode(["express", "nodemon", "cors"], config.server.path ?? 'server');
+    setupNode(["express", "nodemon", "cors", "dotenv"], config.server.path ?? 'server');
     setupNode([], config.server.path ?? 'app');
     buildServer(config);
     // console.log(process.cwd())

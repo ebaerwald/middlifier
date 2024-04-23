@@ -56,6 +56,7 @@ export const packageTemp = {
 const midConfigJSON: rMidConfig = {
     server: {
         port: 4000,
+        funcs: {}
     },
     app: {
 
