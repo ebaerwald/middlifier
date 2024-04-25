@@ -1,6 +1,6 @@
 import { PoolConfig } from 'pg';
 import { Config } from 'drizzle-kit';
-import { rSchema, rServer, MidFuncs } from '..';
+import { rSchema, rServer, MidFuncs, MidFunc } from '..';
 
 type Imports = {
     [key: string]: string[]
@@ -49,17 +49,17 @@ export const indexTemp = (server: rServer) => {
     const topLines: string[] = ['import express from "express"'];
     if (server.cors) topLines.push('import cors from "cors"');
     if (server.secrets) topLines.push('import dotenv from "dotenv"', 'dotenv.config()');
-    const imports: Imports = {};
-    const funcNames = server.indexFuncNames ?? [];
+    let imports: Imports = {};
+    const funcNames = server.indexFuncNames;
     const bottomLines: string[] = [];
-    for (const name of funcNames)
+    const obj = findMidfuncs(server.funcs, funcNames ?? []);
+    imports = {...imports, ...obj};
+    for (const path in obj)
     {
-        const func = findFunctionInMidFunctions(server.funcs, name);
-        if (func)
+        const funcs = obj[path];
+        for (const func of funcs)
         {
-            if (!imports[func.path]) imports[func.path] = [];
-            imports[func.path].push(name);
-            bottomLines.push(`app.use(${name});`);
+            bottomLines.push(`app.use(${func});`);
         }
     }
     const routes = server.routes;
@@ -107,15 +107,25 @@ export const indexTemp = (server: rServer) => {
     ];
 };
 
-export function findFunctionInMidFunctions(midfuncs: MidFuncs, name: string)
+export function findMidfuncs(midfuncs: MidFuncs, funcNames: string[]): Imports
 {
-    for (const key in midfuncs)
+    const funcs: Imports = {}
+    for (const path in midfuncs)
     {
-        if (key == name)
+        const x = midfuncs[path];
+        for (const name in x)
         {
-            return midfuncs[key];
+            const y = x[name];
+            for (const func in y)
+            {
+                if (funcNames.includes(func))
+                {
+                    if (!funcs[`./${path}/${name}`]) funcs[`./${path}/${name}`] = [];
+                    funcs[`./${path}/${name}`].push(func);
+                }
+            }
         }
     }
-    return null;
+    return funcs;
 }
 

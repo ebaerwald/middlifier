@@ -1,10 +1,10 @@
-import { rMidConfig, rSchema } from "../index";
+import { MidConfig } from "../index";
 import fs from 'fs';
 import { arrayToString, createDirIfNotExistent } from "../helper";
 import { nodemonTemp, tsconfigTemp, packageTemp } from "../temp";
 import { dbConfigTemp, drizzleConfigTemp, schemaTemp, indexTemp } from "./temp";
 
-export function buildServer(config: rMidConfig)
+export function buildServer(config: MidConfig)
 {
     const serverPath = config.server.path ?? './server';
     process.chdir(serverPath);
@@ -66,7 +66,7 @@ export function buildServer(config: rMidConfig)
     }
     createDirIfNotExistent('./src');
     process.chdir('./src');
-    createDirIfNotExistent('routes');
+    buildMidFuncs(config);
     fs.writeFileSync('index.ts', arrayToString(indexTemp(config.server)));
     createDirIfNotExistent('./db');
     process.chdir('./db'); 
@@ -92,4 +92,41 @@ export function buildServer(config: rMidConfig)
         }
     }
     process.chdir('../../..');
+}
+
+function buildMidFuncs(config: MidConfig)
+{
+    const midfuncs = config.server.funcs;
+    const funcLines = [];
+    for (const path in midfuncs)
+    {
+        const x = midfuncs[path];
+        for (const name in x)
+        {
+            const y = x[name];
+            for (const func in y)
+            {
+                const z = y[func];
+                const reqConfig = z.req;
+                if (reqConfig)
+                {
+                    if (reqConfig.dynamicRoute)
+                    {
+    
+                    }
+                }
+                fs.writeFileSync(`./${path}/${name}.ts`, arrayToString([
+                    'import { Request, Response, NextFunction } from "express";',
+                    '',
+                    `export async function ${func}(req: Request, res: Response, next: NextFunction) {`,
+                    '}'
+                ]));
+            }
+        }
+    }
+}
+
+function buildRoutes(config: MidConfig)
+{
+
 }

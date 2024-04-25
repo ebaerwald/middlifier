@@ -7,30 +7,33 @@ import { PoolConfig } from 'pg';
 import { packageTemp, tsconfigTemp, nodemonTemp, midConfigTemp, indexTemp} from './temp';
 import { OptionsJson, OptionsUrlencoded } from 'body-parser';
 import { CorsOptions } from 'cors';
-import { RequestHandler } from 'express';
-
+import { ZodTypeAny } from 'zod';
 
 type ReqConfig = {
     body?: {
-        [key: string]: any | { type: any, required: boolean };
+        [key: string]: ZodTypeAny | { type: ZodTypeAny, required: boolean };
     },
-    params?: {
-        urlEncoded?: boolean; 
-        [key: string]: any | { type: any, required: boolean };
+    params?: [boolean, ZodTypeAny],
+    dynamicRoute?: never
+} | {
+    body?: {
+        [key: string]: ZodTypeAny | { type: ZodTypeAny, required: boolean };
     },
+    params?: never,
     dynamicRoute?: string
 };
 type ResConfig = {};
 export type MidFunc = {
-    func: RequestHandler,
-    subFunc?: MidFunc,
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD' | 'CONNECT' | 'TRACE',
     req?: ReqConfig,
     res?: ResConfig,
-    path: string
 };
 export type MidFuncs = {
-    [name: string]: MidFunc
+    [path: string]: {
+        [fileName: string]: {
+            [funcName: string]: MidFunc 
+        }
+    }
 };
 type Server = {
     port: number | string, // string if you get the variable from .env file
@@ -83,18 +86,17 @@ export type Routes = {
         {
             [key: string]: Routes
         },
-        [string] | [string, string] // path of the router and name of midfunction 
+        [string] | [string, string] // [path] or [path, funcName]
     ]
 };
 export type FinalRoutes = {
     [key: string]: Routes
 }
-type MidConfig = {
+export type MidConfig = Readonly<{
     language?: string,
     server: Server,
     app: App
-}
-export type rMidConfig = Readonly<MidConfig>;
+}>
 
 export function init()
 {

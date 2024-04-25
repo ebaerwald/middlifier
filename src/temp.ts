@@ -1,4 +1,4 @@
-import { rMidConfig } from ".";
+import { MidConfig } from ".";
 
 export const nodemonTemp = {
     ext: "ts",
@@ -53,20 +53,19 @@ export const packageTemp = {
     ]    
 };
 
-const midConfigJSON: rMidConfig = {
+const midConfigJSON: MidConfig = {
     server: {
-        port: 4000,
-        funcs: {}
+        port: 3000,
+        funcs: {
+            
+        }
     },
-    app: {
-
-    }
+    app: {}
 }
-
 export const midConfigTemp = [
-    'import { rMidConfig } from "middlifier";',
+    'import { MidConfig } from "middlifier";',
     '',
-    `export const config: rMidConfig = ${JSON.stringify(midConfigJSON, null, 2).replace(/\\/g, '\\\\')};`,
+    `export const config: MidConfig = ${JSON.stringify(midConfigJSON, null, 2).replace(/\\/g, '\\\\')};`,
 ]
 
 export const indexTemp = [
