@@ -75,8 +75,8 @@ export const indexTemp = (server: rServer) => {
                 {
                     const path: string = secondRoute[1][0];
                     if (!imports[path]) imports[path] = [];
-                    imports[path].push(`${secondKey}Store`);
-                    bottomLines.push(`app.use('/${key}', ${secondKey}Store);`);
+                    imports[path].push(`${secondKey}Route`);
+                    bottomLines.push(`app.use('/${key}', ${secondKey}Route);`);
                 }
             }
         }

@@ -1,7 +1,6 @@
 import { MidConfig, ParamType } from "..";
 import fs from 'fs';
 import { arrayToString } from "../helper";
-import { z, ZodTypeAny } from "zod";
 
 export function buildMidFuncs(config: MidConfig)
 {
@@ -26,7 +25,7 @@ export function buildMidFuncs(config: MidConfig)
                     else if (reqConfig.params)
                     {
                         const data = reqConfig.params;
-                        let zodFrontStr = 'z.object({';
+                        let zodFrontStr = 'z.object({ ';
                         let zodBackStr = '})';
                         const paramNames: string[] = []
                         for (const paramName in data)
@@ -40,21 +39,21 @@ export function buildMidFuncs(config: MidConfig)
                             }
                             else
                             {
-                                zodFrontStr += `${paramName}: z.union(${convertParamTypeToZodTypeAnyString(paramType)}, z.undefined())`
+                                zodFrontStr += `${paramName}: ${convertParamTypeToZodTypeAnyString(paramType)}.optional(), `
                             }
                         }
                         const zodStr = zodFrontStr + zodBackStr;
                         funcLines.push([
-                            'const params = req.params',
-                            `const { ${paramNames.join(', ')} } = params;`,
-                            `const schema = ${zodStr};`,
-                            'schema.parse(params);'
+                            `   const schema = ${zodStr};`,
+                            '   const params: z.infer<typeof schema> = req.params',
+                            '   schema.parse(params);',
+                            `   const { ${paramNames.join(', ')} } = params;`
                         ]); 
                     }
                     if (reqConfig.body)
                     {
                         const data = reqConfig.body;
-                        let zodFrontStr = 'z.object({';
+                        let zodFrontStr = 'z.object({ ';
                         let zodBackStr = '})';
                         const paramNames: string[] = []
                         for (const paramName in data)
@@ -68,15 +67,15 @@ export function buildMidFuncs(config: MidConfig)
                             }
                             else
                             {
-                                zodFrontStr += `${paramName}: z.union(${convertParamTypeToZodTypeAnyString(paramType)}, z.undefined())`
+                                zodFrontStr += `${paramName}: ${convertParamTypeToZodTypeAnyString(paramType)}.optional(), `
                             }
                         }
                         const zodStr = zodFrontStr + zodBackStr;
                         funcLines.push([
-                            '   const body = req.body',
-                            `   const { ${paramNames.join(', ')} } = body;`,
                             `   const schema = ${zodStr};`,
-                            '   schema.parse(body);'
+                            '   const body: z.infer<typeof schema> = req.body',
+                            '   schema.parse(body);',
+                            `   const { ${paramNames.join(', ')} } = body;`
                         ]); 
                     }
                 }
@@ -94,37 +93,27 @@ export function buildMidFuncs(config: MidConfig)
     }
 }
 
-function convertParamTypeToZodTypeAnyString(type: ParamType, frontStr: string = '', backStr: string = '')
-{
-    if (Array.isArray(type))
-    {
+function convertParamTypeToZodTypeAnyString(type: ParamType, frontStr: string = '', backStr: string = '') {
+    if (Array.isArray(type)) {
         frontStr += 'z.array(';
         backStr += ')';
-        convertParamTypeToZodTypeAnyString(type[0], frontStr, backStr);
-    }
-    else if (typeof type === 'object' && !Array.isArray(type) && type !== null)
-    {
+        return convertParamTypeToZodTypeAnyString(type[0], frontStr, backStr);
+    } else if (typeof type === 'object' && type !== null) {
         frontStr += 'z.object({';
         backStr += '})';
-        for (const key in type)
-        {
-            frontStr += `${key}: ${convertParamTypeToZodTypeAnyString(type[key], frontStr, backStr)}`
+        let innerStr = '';
+        for (const key in type) {
+            innerStr += `${key}: ${convertParamTypeToZodTypeAnyString(type[key])}, `;
+        }
+        return frontStr + innerStr.slice(0, -2) + backStr;
+    } else {
+        if (type == 'string') {
+            return frontStr + 'z.string()' + backStr;
+        } else if (type == 'number') {
+            return frontStr + 'z.number()' + backStr;
+        } else {
+            return frontStr + 'z.boolean()' + backStr;
         }
     }
-    else
-    {
-        if (type == 'string')
-        {
-            frontStr += 'z.string()';
-        }
-        else if (type == 'number')
-        {
-            frontStr += 'z.number()';
-        }
-        else
-        {
-            frontStr += 'z.boolean()';
-        }
-    }
-    return `${frontStr}${backStr}`;
 }
+
