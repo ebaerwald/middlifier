@@ -3,6 +3,8 @@ import fs from 'fs';
 import { arrayToString, createDirIfNotExistent } from "../helper";
 import { nodemonTemp, tsconfigTemp, packageTemp } from "../temp";
 import { dbConfigTemp, drizzleConfigTemp, schemaTemp, indexTemp } from "./temp";
+import { buildMidFuncs } from "./midfunc";
+import { buildRoutes } from "./routes";
 
 export function buildServer(config: MidConfig)
 {
@@ -67,6 +69,7 @@ export function buildServer(config: MidConfig)
     createDirIfNotExistent('./src');
     process.chdir('./src');
     buildMidFuncs(config);
+    buildRoutes(config);
     fs.writeFileSync('index.ts', arrayToString(indexTemp(config.server)));
     createDirIfNotExistent('./db');
     process.chdir('./db'); 
@@ -92,41 +95,4 @@ export function buildServer(config: MidConfig)
         }
     }
     process.chdir('../../..');
-}
-
-function buildMidFuncs(config: MidConfig)
-{
-    const midfuncs = config.server.funcs;
-    const funcLines = [];
-    for (const path in midfuncs)
-    {
-        const x = midfuncs[path];
-        for (const name in x)
-        {
-            const y = x[name];
-            for (const func in y)
-            {
-                const z = y[func];
-                const reqConfig = z.req;
-                if (reqConfig)
-                {
-                    if (reqConfig.dynamicRoute)
-                    {
-    
-                    }
-                }
-                fs.writeFileSync(`./${path}/${name}.ts`, arrayToString([
-                    'import { Request, Response, NextFunction } from "express";',
-                    '',
-                    `export async function ${func}(req: Request, res: Response, next: NextFunction) {`,
-                    '}'
-                ]));
-            }
-        }
-    }
-}
-
-function buildRoutes(config: MidConfig)
-{
-
 }

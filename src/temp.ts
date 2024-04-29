@@ -57,13 +57,26 @@ const midConfigJSON: MidConfig = {
     server: {
         port: 3000,
         funcs: {
-            
+            func: {
+                user: {
+                    getUser: {
+                        req: {
+                            body: {
+                                name: {
+                                    type: ['string']
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     app: {}
 }
 export const midConfigTemp = [
     'import { MidConfig } from "middlifier";',
+    'import { z } from "zod"',
     '',
     `export const config: MidConfig = ${JSON.stringify(midConfigJSON, null, 2).replace(/\\/g, '\\\\')};`,
 ]

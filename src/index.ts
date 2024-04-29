@@ -7,21 +7,25 @@ import { PoolConfig } from 'pg';
 import { packageTemp, tsconfigTemp, nodemonTemp, midConfigTemp, indexTemp} from './temp';
 import { OptionsJson, OptionsUrlencoded } from 'body-parser';
 import { CorsOptions } from 'cors';
-import { ZodTypeAny } from 'zod';
 
 type ReqConfig = {
     body?: {
-        [key: string]: ZodTypeAny | { type: ZodTypeAny, required: boolean };
+        [key: string]: { type: ParamType, required?: boolean };
     },
-    params?: [boolean, ZodTypeAny],
+    params?: {
+        [key: string]: { type: ParamType, required?: boolean, urlencoded?: boolean };
+    },
     dynamicRoute?: never
 } | {
     body?: {
-        [key: string]: ZodTypeAny | { type: ZodTypeAny, required: boolean };
+        [key: string]: { type: ParamType, required?: boolean };
     },
     params?: never,
     dynamicRoute?: string
 };
+export type ParamType = 'string' | 'number' | 'boolean' | {
+    [key: string]: ParamType
+} | [ParamType];
 type ResConfig = {};
 export type MidFunc = {
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD' | 'CONNECT' | 'TRACE',
@@ -123,7 +127,7 @@ export function end(app: string, server: string)
 
 export function start(config: MidConfig)
 {
-    setupNode(["express", "nodemon", "cors", "dotenv"], config.server.path ?? 'server');
+    setupNode(["express", "nodemon", "cors", "dotenv", "zod"], config.server.path ?? 'server');
     setupNode([], config.server.path ?? 'app');
     buildServer(config);
     // console.log(process.cwd())
