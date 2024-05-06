@@ -46,5 +46,8 @@
     "pg-pool": "^3.6.2",
     "prompt-sync": "^4.2.0",
     "zod": "^3.23.4"
-  }
+  },
+  "publishConfig": {
+    "@ebaerwald:registry": "https://npm.pkg.github.com"
+  },
 }
