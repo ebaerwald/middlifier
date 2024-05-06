@@ -69,7 +69,7 @@ For hot reload is [nodemon](https://nodemon.io/) used. Nodemon checks if changes
 - [ ] Automatic generation of documentation
 - [ ] Middleware build
 - [ ] [Strapi](https://strapi.io/) integration
-**Add an Issue type enhancement for more feature ideas!**
+- **Add an Issue type enhancement for more feature ideas!**
 
 ## Getting Started
 1. Navigate to your project folder: `cd 'project-folder'`
