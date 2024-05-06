@@ -162,4 +162,4 @@ type MidConfig = {
   }
 }
 ```
-
+**I am looking for open source non-profit-oriented developers. If you are interested contact me: baerwald.erik@gmail.com! 🚀**
