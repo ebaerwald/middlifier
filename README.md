@@ -97,8 +97,8 @@ type MidConfig = {
     port: number | string, // string if you want to use an environment variable
     host?: string          // url of server
     ssl?: boolean          // secure connection
-    set?: {                // environment variables you yould like to set in a ".env" file
-      [envVar: string]: any
+    set?: {                
+      [key: string]: any
     },
     cors?: CorsOptions,    // cors options for the server app.use(cors(MidConfig.server.cors))
     funcs: {
@@ -150,7 +150,7 @@ type MidConfig = {
           }  
         }
     },
-    secrets?: {
+    secrets?: { // environment variables you yould like to set in a ".env" file
             [key: string]: string
     },
     docker?: [
