@@ -1,6 +1,10 @@
-import { MidConfig, ParamType } from "..";
+import { MidConfig, ParamType, MidFuncs, MidFunc } from "..";
 import fs from 'fs';
 import { arrayToString } from "../helper";
+
+export type FuncObj = {
+    [path: string]: [string[], MidFunc[]]
+}
 
 export function buildMidFuncs(config: MidConfig)
 {
@@ -115,5 +119,29 @@ function convertParamTypeToZodTypeAnyString(type: ParamType, frontStr: string = 
             return frontStr + 'z.boolean()' + backStr;
         }
     }
+}
+
+export function findMidfuncs(midfuncs: MidFuncs, funcNames: string[]): FuncObj
+{
+    const funcs: FuncObj = {}
+    for (const path in midfuncs)
+    {
+        const x = midfuncs[path];
+        for (const filename in x)
+        {
+            const y = x[filename];
+            for (const funcName in y)
+            {
+                const mFunc = y[funcName];
+                if (funcNames.includes(funcName))
+                {
+                    if (!funcs[`./${path}/${filename}`]) funcs[`./${path}/${filename}`] = [[], []];
+                    funcs[`./${path}/${filename}`][0].push(funcName);
+                    funcs[`./${path}/${filename}`][1].push(mFunc);
+                }
+            }
+        }
+    }
+    return funcs;
 }
 

@@ -8,7 +8,7 @@ import { packageTemp, tsconfigTemp, nodemonTemp, midConfigTemp, indexTemp} from 
 import { OptionsJson, OptionsUrlencoded } from 'body-parser';
 import { CorsOptions } from 'cors';
 
-type ReqConfig = {
+export type ReqConfig = {
     body?: {
         [key: string]: { type: ParamType, required?: boolean };
     },
@@ -50,7 +50,7 @@ type Server = {
     cors?: CorsOptions,
     funcs: MidFuncs,
     indexFuncNames?: string[],
-    routes?: FinalRoutes,
+    routes?: Routes,
     json?: OptionsJson,
     urlencoded?: OptionsUrlencoded,
     drizzle?: {
@@ -85,17 +85,18 @@ export type rSchema = Readonly<Schema>;
 type Schemas = {
     [key: string]: Schema  
 };
-export type Routes = {
-    [key: string]: Routes | [
-        {
-            [key: string]: Routes
-        },
-        [string] | [string, string] // [path] or [path, funcName]
-    ]
-};
-export type FinalRoutes = {
+export type InnerRoute = [ 
+{
     [key: string]: Routes
-}
+},
+[string] | [string, string[]]];
+
+export type Routes = {
+    [key: string]: Routes | InnerRoute
+};
+// export type FinalRoutes = {
+//     [key: string]: Routes
+// }
 export type MidConfig = Readonly<{
     language?: string,
     server: Server,
