@@ -1,16 +1,16 @@
 const { execSync } = require('child_process');
 const fs = require('fs');
 
-if (process.platform === 'win32')
-{
-    execSync('npm run w-delete');
-}
-else
-{
-    execSync('npm run delete');
-}
+// if (process.platform === 'win32')
+// {
+//     execSync('npm run w-delete');
+// }
+// else
+// {
+//     execSync('npm run delete');
+// }
 
-execSync('npm run build');
+// execSync('npm run build');
 
 console.log('Building done!');
 let packageJsonContent = fs.readFileSync('package.json', { encoding: 'utf-8', flag: 'r' });
@@ -23,5 +23,5 @@ fs.writeFileSync('package.json', formattedJson);
 
 execSync('npm publish', { stdio: 'inherit' });
 console.log('Published successfully!');
-execSync('npm start');
-process.exit(0);
+// execSync('npm start');
+// process.exit(0);

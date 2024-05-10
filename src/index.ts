@@ -87,7 +87,7 @@ type Schemas = {
 };
 export type InnerRoute = [ 
 {
-    [key: string]: Routes
+    [key: string]: Routes | InnerRoute
 },
 [string] | [string, string[]]];
 

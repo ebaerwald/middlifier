@@ -7,45 +7,47 @@ export function buildRoutes(config: MidConfig)
     const funcs = config.server.funcs;
     const funcObj = getFuncInfo(funcs);
     const routeInfo = getRouteObj(routes ?? {}, funcObj);
-    console.log(JSON.stringify(routeInfo));
+    console.log(JSON.stringify(routeInfo, null, 2));
 }
 
-function getRouteObj(routes: Routes | InnerRoute, funcObj: FuncObj, routeObj: RouteObj = {}, currentRoute: string = '', lastPath: string = '-', lastKey: string = '')
-{
-    if (Array.isArray(routes))
-    {
+export function getRouteObj(routes: Routes | InnerRoute, funcObj: FuncObj, routeObj: RouteObj = {}, currentRoute: string = '', lastPath: string = '-', lastKey: string = ''): RouteObj {
+    if (Array.isArray(routes)) {
+        const [innerRoute, routeDetails] = routes;
+        const [path, funcs] = routeDetails;
+
         if (!routeObj[lastPath]) routeObj[lastPath] = {};
         if (!routeObj[lastPath][currentRoute]) routeObj[lastPath][currentRoute] = [];
-        routeObj[lastPath][currentRoute].push([`${lastKey}Router`, lastPath]);
+        routeObj[lastPath][currentRoute].push([`./${path}`, `${lastKey}Router`]);
 
-        const path = routes[1][0];
-        const funcs = routes[1][1];
-        const cRoute = routes[0];
-        if (!routeObj[path]) routeObj[path] = {};
-        if (!routeObj[path][`/${lastKey}`]) routeObj[path][`/${lastKey}`] = [];
-        if (funcs)
-        {
-            for (const func of funcs)
-            {
-                routeObj[path][`/${lastKey}`].push(funcObj[func]);
+        if (funcs) {
+            for (const func of funcs) {
+                const finalFunc = funcObj[func];
+                try {
+                    if (finalFunc[0] !== null)
+                    {
+                        if (!routeObj[path]) routeObj[path] = {};
+                        if (!routeObj[path][`/${lastKey}`]) routeObj[path][`/${lastKey}`] = [];
+                        routeObj[path][`/${lastKey}`].push(funcObj[func]);
+                    }
+                }
+                catch (e: any) {}
             }
         }
-        return getRouteObj(cRoute, funcObj, routeObj, '', path, '');
-    }
-    else
-    {
-        for (const key in routes)
-        {
+        
+        return getRouteObj(innerRoute, funcObj, routeObj, '', path, '');
+    } else {
+        for (const key in routes) {
             const route = routes[key];
-            currentRoute += `/${key}`;
-            lastKey = key;
-            return getRouteObj(route, funcObj, routeObj, currentRoute, lastPath, lastKey);
+            let updatedCurrentRoute = currentRoute + `/${key}`;
+            let updatedLastKey = key;
+            routeObj = getRouteObj(route, funcObj, routeObj, updatedCurrentRoute, lastPath, updatedLastKey);
         }
     }
     return routeObj;
 }
 
-function getFuncInfo(funcs: MidFuncs)
+
+export function getFuncInfo(funcs: MidFuncs)
 {
     const funcObj: {[funcName: string]: FuncInfo} = {};
     for (const path in funcs)

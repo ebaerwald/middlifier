@@ -3,6 +3,7 @@ import { Config } from 'drizzle-kit';
 import { rSchema, rServer, MidFuncs, MidFunc, Routes, InnerRoute, ReqConfig } from '..';
 import { findMidfuncs } from './midfunc';
 // import { getRouteChildren } from './routes';
+import { getRouteObj, getFuncInfo } from './routes';
 
 type Imports = {
     [path: string]: string[];
@@ -70,28 +71,29 @@ export const indexTemp = (server: rServer) => {
         }
     }
     const routes = server.routes;
+    const funcs = server.funcs;
     if (routes)
     {
-        // for (const key in routes)
-        // {
-        //     const route = routes[key];
-        //     for (const secondKey in route)
-        //     {
-        //         const secondRoute = route[secondKey];
-        //         if (Array.isArray(secondRoute))
-        //         {
-        //             const path: string = secondRoute[1][0];
-        //             if (!imports[path]) imports[path] = [];
-        //             imports[path].push(`${secondKey}Route`);
-        //             bottomLines.push(`app.use('/${key}', ${secondKey}Route);`);
-        //         }
-        //     }
-        // }
-        // const children: RouteObj = getRouteChildren(server.funcs, routes);
-        for (const key in routes)
+        const funcObj = getFuncInfo(funcs);
+        const routeInfo = getRouteObj(routes ?? {}, funcObj);
+        
+        const route = routeInfo["-"];
+        for (const key in route)
         {
-
+            const midFuncs = route[key];
+            for (const funcInfo of midFuncs)
+            {
+                const path = funcInfo[0];
+                const funcName = funcInfo[1];
+                const method = funcInfo[2] ?? 'use';
+                let dynamicRoute = funcInfo[3] ?? '';
+                if (dynamicRoute !== '') dynamicRoute = `:${dynamicRoute}`;
+                if (!imports[path]) imports[path] = [];
+                imports[path].push(funcName);
+                bottomLines.push(`app.${method.toLocaleLowerCase()}("${key}", ${funcName}${dynamicRoute});`);
+            }
         }
+        
     }
     for (const indexImport in imports)
     {
@@ -117,116 +119,4 @@ export const indexTemp = (server: rServer) => {
         '',
         `app.listen(${server.port}, () => console.log('Server running on port ${server.port}'));`
     ];
-};
-
-function buildRoutes(server: rServer): RouteObj
-{
-    const routeObj: RouteObj = {};
-    const funcs = getFuncInfo(server.funcs);
-    return routeObj;
-}
-
-function getRouteObj(routes: Routes | InnerRoute, funcObj: FuncObj, routeObj: RouteObj = {}, currentRoute: string = '', lastPath: string = '', lastKey: string = '')
-{
-    if (Array.isArray(routes))
-    {
-        if (!routeObj[lastPath]) routeObj[lastPath] = {};
-        if (!routeObj[lastPath][currentRoute]) routeObj[lastPath][currentRoute] = [];
-        routeObj[lastPath][currentRoute].push([`${lastKey}Router`, lastPath]);
-
-        const path = routes[1][0];
-        const funcs = routes[1][1];
-        const cRoute = routes[0];
-        if (!routeObj[path]) routeObj[path] = {};
-        if (!routeObj[path][`/${lastKey}`]) routeObj[path][`/${lastKey}`] = [];
-        if (funcs)
-        {
-            for (const func of funcs)
-            {
-                routeObj[path][`/${lastKey}`].push(funcObj[func]);
-            }
-        }
-        return getRouteObj(cRoute, funcObj, routeObj, '', path, '');
-    }
-    else
-    {
-        for (const key in routes)
-        {
-            const route = routes[key];
-            currentRoute += `/${key}`;
-            lastKey = key;
-            return getRouteObj(route, funcObj, routeObj, currentRoute, lastPath, lastKey);
-        }
-    }
-    return routeObj;
-}
-
-// function getRouteChildren(route: Routes, currentRoute: string, routeInfo: {[route: string]: FuncInfo} = {}): {[route: string]: FuncInfo}
-// {
-//     if (Array.isArray(route))
-//     {
-//         routeInfo[currentRoute]
-//     }
-//     return routeInfo;
-// }
-
-function getFuncInfo(funcs: MidFuncs)
-{
-    const funcObj: {[funcName: string]: FuncInfo} = {};
-    for (const path in funcs)
-    {
-        const firstfunc = funcs[path];
-        for (const fileName in firstfunc)
-        {
-            const secondfunc = firstfunc[fileName];
-            for (const funcName in secondfunc)
-            {
-               const midFunc = secondfunc[funcName];
-               if (!funcObj[funcName]) funcObj[funcName] = [`./${path}/${fileName}`, funcName];
-               if (midFunc.method) funcObj[funcName].push(midFunc.method);
-               if (midFunc.req?.dynamicRoute) funcObj[funcName].push(midFunc.req.dynamicRoute);
-            }
-        }
-    }
-    return funcObj;
-}
-
-type FuncObj = {
-    [funcName: string]: FuncInfo;
-}
-// function getRouteChildren(routes: Routes, initialRoute: string, currentRoute: string = '', routesStr: string[] = []): string[]
-// {
-//     if (!Array.isArray(routes))
-//     {
-//         for (const routeName in routes)
-//         {
-//             const route = routes[routeName];
-//             currentRoute += `/${routeName}`;
-//             return getRouteChildren(route, initialRoute, currentRoute, routesStr);
-//         }
-//     }
-//     else 
-//     {
-//         routesStr.push(currentRoute);
-//     }
-//     return routesStr;
-// }
- /** information needed:
-  *  @param {string} paths of Functions -- every path could contain multiple @param funcs
-  *  @param {string | [string, string | null, string | null]} funcs of Functions -- funcname, method, dynamicRoute
-  *  @param {string} routes of Functions 
-*/ 
-
-/**
- * @param {string} funcPath - first
- * @param {string} funcName - second
- * @param {string | undefined} method - third
- * @param {string | undefined} dynamicRoute - fourth
- */
-type FuncInfo = [string, string] | [string, string, string] | [string, string, string, string];
-
-type RouteObj = {
-    [path: string]: {
-        [route: string]: FuncInfo[]
-    }
 };
