@@ -79,6 +79,8 @@ For hot reload is [nodemon](https://nodemon.io/) used. Nodemon checks if changes
 5. Navigate to the "gen" folder: `cd gen`
 6. Start builder: `npm run dev`
 7. Edit "mid.config.ts" in the "gen/src" folder
+8. Navigate to your project folder: `cd 'project-folder'`
+9. Delete unnecessary files with: `npx middlifier-end`
 ```typescript
 import { MidConfig } from "middlifier";
 export const config: MidConfig = {
