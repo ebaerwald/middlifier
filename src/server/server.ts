@@ -69,8 +69,9 @@ export function buildServer(config: MidConfig)
     createDirIfNotExistent('./src');
     process.chdir('./src');
     buildMidFuncs(config);
-    buildRoutes(config);
-    fs.writeFileSync('index.ts', arrayToString(indexTemp(config.server)));
+    const temp = indexTemp(config.server);
+    fs.writeFileSync('index.ts', arrayToString(temp[0]));
+    buildRoutes(temp[1]);
     createDirIfNotExistent('./db');
     process.chdir('./db'); 
     if (config.server.drizzle)

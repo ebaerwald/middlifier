@@ -1,9 +1,9 @@
 import { PoolConfig } from 'pg';
 import { Config } from 'drizzle-kit';
-import { rSchema, rServer, MidFuncs, MidFunc, Routes, InnerRoute, ReqConfig } from '..';
+import { rSchema, rServer, MidFuncs, MidFunc, Routes, InnerRoute, ReqConfig, FinalRouteObj } from '..';
 import { findMidfuncs } from './midfunc';
 // import { getRouteChildren } from './routes';
-import { getRouteObj, getFuncInfo } from './routes';
+import { getRouteObj, getFuncInfo, RouteObj } from './routes';
 
 type Imports = {
     [path: string]: string[];
@@ -48,7 +48,8 @@ export const schemaTemp = (schema: rSchema, name: string) => {
     ];
 }
 
-export const indexTemp = (server: rServer) => {
+export const indexTemp = (server: rServer): [string[], FinalRouteObj] => {
+    let routeInfo: FinalRouteObj = {};
     const topLines: string[] = ['import express from "express"'];
     if (server.cors) topLines.push('import cors from "cors"');
     if (server.secrets) topLines.push('import dotenv from "dotenv"', 'dotenv.config()');
@@ -74,13 +75,13 @@ export const indexTemp = (server: rServer) => {
     const funcs = server.funcs;
     if (routes)
     {
+
         const funcObj = getFuncInfo(funcs);
-        const routeInfo = getRouteObj(routes ?? {}, funcObj);
-        
-        const route = routeInfo["-"];
-        for (const key in route)
+        routeInfo = getRouteObj(routes, funcObj);
+        const indexRoute = routeInfo["-"] ?? {};
+        for (const route in indexRoute)
         {
-            const midFuncs = route[key];
+            const midFuncs: any = indexRoute[route];
             for (const funcInfo of midFuncs)
             {
                 const path = funcInfo[0];
@@ -90,9 +91,25 @@ export const indexTemp = (server: rServer) => {
                 if (dynamicRoute !== '') dynamicRoute = `:${dynamicRoute}`;
                 if (!imports[path]) imports[path] = [];
                 imports[path].push(funcName);
-                bottomLines.push(`app.${method.toLocaleLowerCase()}("${key}", ${funcName}${dynamicRoute});`);
+                bottomLines.push(`app.${method.toLocaleLowerCase()}("${route}", ${funcName}${dynamicRoute});`);
             }
         }
+        // const route = routeInfo["-"];
+        // for (const key in route)
+        // {
+        //     const midFuncs = route[key];
+        //     for (const funcInfo of midFuncs)
+        //     {
+        //         const path = funcInfo[0];
+        //         const funcName = funcInfo[1];
+        //         const method = funcInfo[2] ?? 'use';
+        //         let dynamicRoute = funcInfo[3] ?? '';
+        //         if (dynamicRoute !== '') dynamicRoute = `:${dynamicRoute}`;
+        //         if (!imports[path]) imports[path] = [];
+        //         imports[path].push(funcName);
+        //         bottomLines.push(`app.${method.toLocaleLowerCase()}("${key}", ${funcName}${dynamicRoute});`);
+        //     }
+        // }
         
     }
     for (const indexImport in imports)
@@ -110,7 +127,7 @@ export const indexTemp = (server: rServer) => {
         bottomLines.push(`app.set('${setKey}', ${JSON.stringify(set, null, 2).replace(/\\/g, '\\\\')})`);
     }
 
-    return [
+    return [[
         ...topLines,
         '',
         'const app = express()',
@@ -118,5 +135,6 @@ export const indexTemp = (server: rServer) => {
         ...bottomLines,
         '',
         `app.listen(${server.port}, () => console.log('Server running on port ${server.port}'));`
+    ], routeInfo
     ];
 };

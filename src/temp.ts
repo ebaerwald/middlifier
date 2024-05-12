@@ -74,11 +74,10 @@ const midConfigJSON: MidConfig = {
         }
       },
       routes: {
-        api: {
-          user: [{
-            parent: [{}, ["func/parent", ["getParent"]]]
-          }, ["func/user", ["getUser"]]],
-          plan: [{}, ["func/plan", ["getPlan"]]]
+        "-": {
+          user: {
+            get: [['getUser']]
+          }
         }
       }
     },

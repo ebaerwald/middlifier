@@ -85,23 +85,46 @@ export type rSchema = Readonly<Schema>;
 type Schemas = {
     [key: string]: Schema  
 };
-export type InnerRoute = [ 
-{
-    [key: string]: Routes | InnerRoute
-},
-[string] | [string, string[]]];
-
-export type Routes = {
-    [key: string]: Routes | InnerRoute
-};
-// export type FinalRoutes = {
-//     [key: string]: Routes
-// }
 export type MidConfig = Readonly<{
     language?: string,
     server: Server,
     app: App
 }>
+
+/**
+ * @param {string} path Path of the routes, for the index routes use "-" 
+ * @param {InnerRoute} InnerRoute
+ */
+export type Routes = {
+    [path: string]: InnerRoute
+}
+
+/**
+ * @param {string} route Routes can be nested.
+ * @param {InnerRoute} InnerRoute
+ */
+export type InnerRoute = {
+    [route: string]: InnerRoute | ([string] | [string, string])[] // funcName or funcName and path, if path search path in Routes, if not search funcName in Midfuncs
+}
+
+export type FinalRouteObj = {
+    [path: string]: FinalInnerRoute
+}
+
+export type FinalInnerRoute = {
+    [route: string]: FinalInnerRoute | FuncInfo[]
+}
+
+/**
+* @param {string} funcPath - first
+* @param {string} funcName - second
+* @param {string | undefined} method - third
+* @param {string | undefined} dynamicRoute - fourth
+*/
+export type FuncInfo = [string, string] | [string, string, string] | [string, string, string, string];
+
+
+
 
 export function init()
 {

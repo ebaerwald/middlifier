@@ -1,46 +1,119 @@
-import { MidConfig, MidFunc, MidFuncs, Routes, InnerRoute } from "..";
-import { findMidfuncs } from "./midfunc";
+import { MidFuncs, Routes, InnerRoute, FinalRouteObj, FinalInnerRoute } from "..";
+import { createDirIfNotExistent, arrayToString } from "../helper";
+import fs from 'fs';
 
-export function buildRoutes(config: MidConfig)
+
+export function buildRoutes(routeInfo: FinalRouteObj)
 {
-    const routes = config.server.routes;
-    const funcs = config.server.funcs;
-    const funcObj = getFuncInfo(funcs);
-    const routeInfo = getRouteObj(routes ?? {}, funcObj);
-    console.log(JSON.stringify(routeInfo, null, 2));
-}
-
-export function getRouteObj(routes: Routes | InnerRoute, funcObj: FuncObj, routeObj: RouteObj = {}, currentRoute: string = '', lastPath: string = '-', lastKey: string = ''): RouteObj {
-    if (Array.isArray(routes)) {
-        const [innerRoute, routeDetails] = routes;
-        const [path, funcs] = routeDetails;
-
-        if (!routeObj[lastPath]) routeObj[lastPath] = {};
-        if (!routeObj[lastPath][currentRoute]) routeObj[lastPath][currentRoute] = [];
-        routeObj[lastPath][currentRoute].push([`./${path}`, `${lastKey}Router`]);
-
-        if (funcs) {
-            for (const func of funcs) {
-                const finalFunc = funcObj[func];
-                try {
-                    if (finalFunc[0] !== null)
-                    {
-                        if (!routeObj[path]) routeObj[path] = {};
-                        if (!routeObj[path][`/${lastKey}`]) routeObj[path][`/${lastKey}`] = [];
-                        routeObj[path][`/${lastKey}`].push(funcObj[func]);
-                    }
-                }
-                catch (e: any) {}
+    console.log(`Final Route Obj: ${JSON.stringify(routeInfo, null, 2)}`);
+    const imports: {[path: string]: string[]} = {};
+    for (const path in routeInfo)
+    {
+        const content = [
+            'import { Router } from "express";',
+        ];
+        const bottomLines: string[] = [''];
+        if (path === '-') continue;
+        const routeName = getRouteName(path, routeInfo);
+        if (!routeName) throw new Error(`This route file is never been used!: ${path}`);
+        bottomLines.push(`export const ${routeName} = Router();`);
+        const routes = routeInfo[path];
+        for (const route in routes)
+        {
+            const funcs: any = routes[route];   
+            for (const func of funcs)
+            {
+                let [path, funcName, method, dynamicRoute] = func;
+                dynamicRoute = dynamicRoute ? `:${dynamicRoute}` : '';
+                if (!imports[path]) imports[path] = [];
+                imports[path].push(funcName);
+                bottomLines.push(`${routeName}.route(${route}).${method ?? 'use'}(${funcName}${dynamicRoute});`);
             }
         }
-        
-        return getRouteObj(innerRoute, funcObj, routeObj, '', path, '');
-    } else {
-        for (const key in routes) {
-            const route = routes[key];
-            let updatedCurrentRoute = currentRoute + `/${key}`;
-            let updatedLastKey = key;
-            routeObj = getRouteObj(route, funcObj, routeObj, updatedCurrentRoute, lastPath, updatedLastKey);
+        for (const importPath in imports)
+        {
+            content.push(`import { ${imports[importPath].join(', ')} } from "${importPath}";`);
+        }
+        content.push(...bottomLines);
+        writeRouteFile(path, content);
+    }
+}
+
+function writeRouteFile(path: string, content: string[])
+{
+    path = path.replace('.', '');
+    const pathArr = path.split('/');
+    let dir = '.'
+    for (let i = 0; i < pathArr.length; i++)
+    {
+        dir += `/${pathArr[i]}`;
+        if (i === pathArr.length - 1)
+        {
+            const file = `${dir}.ts`;
+            fs.writeFileSync(file, arrayToString(content));
+            continue;
+        }
+        createDirIfNotExistent(dir);
+    }
+}
+
+function getRouteName(cpath: string, routeInfo: FinalInnerRoute)
+{
+    cpath = `.${cpath.replace('.', '')}`;
+    for (let path in routeInfo)
+    {
+        const routes: any = routeInfo[path];
+        for (const route in routes)
+        {
+            const funcs = routes[route];
+            for (const func of funcs)
+            {
+                let [fPath, funcName] = func;
+                fPath = `.${fPath.replace('.', '')}`;
+                if (fPath === cpath) return funcName;
+            }
+        }
+    }
+    return null;
+}
+
+export function getRouteObj(routes: Routes, funcObj: FuncObj, routeObj: FinalRouteObj = {}): FinalRouteObj {
+    for (const path in routes)
+    {
+        const route = routes[path];
+        if (!routeObj[path]) routeObj[path] = getInnerRoute(route, funcObj);
+    }
+    return routeObj;
+}
+
+function getInnerRoute(innerRoute: InnerRoute, funcObj: FuncObj, routeObj: FinalInnerRoute = {}, cRoute: string = ''): FinalInnerRoute
+{
+    if (Array.isArray(innerRoute))
+    {
+        const currentRoute: ([string, string] | [string])[] = innerRoute;
+        const funcArr: FuncInfo[] = [];
+        for (const func of currentRoute)
+        {
+            const [funcName, path] = func;
+            const finalFunc = funcObj[funcName];
+            if (path)
+            {
+                funcArr.push([path, funcName]);
+            }
+            else if (finalFunc)
+            {
+                funcArr.push(finalFunc);
+            }
+        }
+        routeObj[cRoute] = funcArr;
+    }
+    else
+    {
+        const currentRoute: any = innerRoute;
+        for (const key in currentRoute)
+        {
+            const routeStr = `${cRoute}/${key}`;
+            getInnerRoute(currentRoute[key], funcObj, routeObj, routeStr);
         }
     }
     return routeObj;
@@ -79,7 +152,7 @@ type FuncObj = {
  */
 type FuncInfo = [string, string] | [string, string, string] | [string, string, string, string];
 
-type RouteObj = {
+export type RouteObj = {
     [path: string]: {
         [route: string]: FuncInfo[]
     }
