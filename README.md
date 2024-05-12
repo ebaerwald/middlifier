@@ -65,7 +65,7 @@ For hot reload is [nodemon](https://nodemon.io/) used. Nodemon checks if changes
 - [x] Funcs build
 - [ ] Urlencoded support params - **will be finished at 20.05.2024**
 - [ ] Prebuild server-functions Logger, OAuth2 - **will be finished at 20.05.2024**
-- [ ] Route build - **will be finished at 20.05.2024**
+- [x] Route build
 - [ ] Automatic generation of documentation
 - [ ] Middleware build
 - [ ] [Strapi](https://strapi.io/) integration
