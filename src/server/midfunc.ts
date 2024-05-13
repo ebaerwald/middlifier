@@ -110,7 +110,8 @@ function convertParamTypeToZodTypeAnyString(type: ParamType, frontStr: string = 
         {
             const validator = valueValidator as {enum?: string[], regex?: string};
             const regex = validator.regex ? `.regex(${validator.regex})` : '';
-            return frontStr + validator.enum ? `z.enum(${JSON.stringify(validator.enum)})${regex}` : `z.string()${regex}` + backStr;
+            const content = validator.enum ? `z.enum(${JSON.stringify(validator.enum)})${regex}` : `z.string()${regex}`;
+            return frontStr + content + backStr;
         }
         else if (innerType === 'number')
         {
