@@ -23,7 +23,7 @@ export type ReqConfig = {
     params?: never,
     dynamicRoute?: string
 };
-export type ParamType = 'string' | 'number' | 'boolean' | {
+export type ParamType = 'string' | 'number' | 'boolean' | ['string', {enum?: string[], regex?: string}] | ['number', {min?: number, max?: number, literal?: number[]}] | {
     [key: string]: ParamType
 } | [ParamType];
 type ResConfig = {};

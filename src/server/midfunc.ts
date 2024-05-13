@@ -98,11 +98,29 @@ export function buildMidFuncs(config: MidConfig)
 }
 
 function convertParamTypeToZodTypeAnyString(type: ParamType, frontStr: string = '', backStr: string = '') {
-    if (Array.isArray(type)) {
+    if (Array.isArray(type) && type.length === 1) {
         frontStr += 'z.array(';
         backStr += ')';
         return convertParamTypeToZodTypeAnyString(type[0], frontStr, backStr);
-    } else if (typeof type === 'object' && type !== null) {
+    }
+    else if (Array.isArray(type) && type.length === 2) {
+        const innerType = type[0];
+        const valueValidator = type[1];
+        if (innerType === 'string')
+        {
+            const validator = valueValidator as {enum?: string[], regex?: string};
+            const regex = validator.regex ? `.regex(${validator.regex})` : '';
+            return frontStr + validator.enum ? `z.enum(${JSON.stringify(validator.enum)})${regex}` : `z.string()${regex}` + backStr;
+        }
+        else if (innerType === 'number')
+        {
+            const validator = valueValidator as {min?: number, max?: number};
+            const min = validator.min ? `.min(${validator.min})` : '';
+            const max = validator.max ? `.max(${validator.max})` : '';
+            return frontStr + `z.number()${min}${max}` + backStr;
+        }
+    }
+    else if (typeof type === 'object' && type !== null) {
         frontStr += 'z.object({';
         backStr += '})';
         let innerStr = '';
