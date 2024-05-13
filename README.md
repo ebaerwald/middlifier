@@ -48,7 +48,7 @@ Corresponding configuration from the mid.config.ts
 | Type    | Options |
 | -------- | ------- |
 | String  | Regex, Enums    |
-| Number | Min, Max, Range     |
+| Number | Min, Max     |
 
 ## Hot Reload
 For hot reload is [nodemon](https://nodemon.io/) used. Nodemon checks if changes in the "mid.config.ts" appear.
@@ -56,7 +56,7 @@ For hot reload is [nodemon](https://nodemon.io/) used. Nodemon checks if changes
 ## Features
 - [x] TypeScript support
 - [ ] JavaScript support
-- [ ] Value Validation
+- [x] Value Validation - **Maybe in future more value validation with full integration of the Zod library.**
 - [x] Type Validation
 - [x] Docker build
 - [x] Drizzle build
