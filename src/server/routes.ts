@@ -1,23 +1,24 @@
 import { MidFuncs, Routes, InnerRoute, FinalRouteObj, FinalInnerRoute } from "..";
 import { createDirIfNotExistent, arrayToString } from "../helper";
 import fs from 'fs';
+import path from 'path';
 
 
 export function buildRoutes(routeInfo: FinalRouteObj)
 {
     console.log(`Final Route Obj: ${JSON.stringify(routeInfo, null, 2)}`);
-    const imports: {[path: string]: string[]} = {};
-    for (const path in routeInfo)
-    {
+    let imports: {[path: string]: string[]} = {};
+    for (const cpath in routeInfo)
+    {   
         const content = [
             'import { Router } from "express";',
         ];
         const bottomLines: string[] = [''];
-        if (path === '-') continue;
-        const routeName = getRouteName(path, routeInfo);
+        if (cpath === '-') continue;
+        const routeName = getRouteName(cpath, routeInfo);
         if (!routeName) throw new Error(`This route file is never been used!: ${path}`);
         bottomLines.push(`export const ${routeName} = Router();`);
-        const routes = routeInfo[path];
+        const routes = routeInfo[cpath];
         for (const route in routes)
         {
             const funcs: any = routes[route];   
@@ -25,9 +26,11 @@ export function buildRoutes(routeInfo: FinalRouteObj)
             {
                 let [path, funcName, method, dynamicRoute] = func;
                 dynamicRoute = dynamicRoute ? `:${dynamicRoute}` : '';
-                if (!imports[path]) imports[path] = [];
-                imports[path].push(funcName);
-                bottomLines.push(`${routeName}.route(${route}).${method ?? 'use'}(${funcName}${dynamicRoute});`);
+                const relativePath = getRelativePath(cpath, path);
+                if (!imports[relativePath]) imports[relativePath] = [];
+                imports[relativePath].push(funcName);
+                const bottomLine = method ? `${routeName}.route('${route}').${method}(${funcName}${dynamicRoute});` : `${routeName}.use('${route}', ${funcName});`
+                bottomLines.push(bottomLine);
             }
         }
         for (const importPath in imports)
@@ -35,8 +38,31 @@ export function buildRoutes(routeInfo: FinalRouteObj)
             content.push(`import { ${imports[importPath].join(', ')} } from "${importPath}";`);
         }
         content.push(...bottomLines);
-        writeRouteFile(path, content);
+        writeRouteFile(cpath, content);
+        imports = {};
     }
+}
+
+function getRelativePath(startPath: string, endPath: string)
+{
+    console.log(`startPath: ${startPath}, endPath: ${endPath}`);
+    const sPathNormalized = `.${startPath.replace('.', '')}`;
+    const ePathNormalized = `.${endPath.replace('.', '')}`;
+    console.log(`sPathNormalized: ${sPathNormalized}, ePathNormalized: ${ePathNormalized}`);
+    const sPathResolved = path.resolve(sPathNormalized);
+    const ePathResolved = path.resolve(ePathNormalized);
+    console.log(`sPathResolved: ${sPathResolved}, ePathResolved: ${ePathResolved}`);
+    const sPathSplit = sPathNormalized.split(path.sep);
+    const ePathSplit = ePathNormalized.split(path.sep);
+    let i = 0;
+    while (i < sPathSplit.length && i < ePathSplit.length && sPathSplit[i] === ePathSplit[i]) {
+        i++;
+    }
+    const upLevels = sPathSplit.length - i;
+    const relativeParts = ['.'.repeat(upLevels), ...ePathSplit.slice(i)];
+    const relativePath = relativeParts.join(path.sep);
+    console.log(`relativePath: ${relativePath}`);
+    return relativePath;
 }
 
 function writeRouteFile(path: string, content: string[])
