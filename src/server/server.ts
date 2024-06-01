@@ -1,6 +1,6 @@
 import { MidConfig } from "../index";
 import fs from 'fs';
-import { arrayToString, createDirIfNotExistent } from "../helper";
+import { _arrayToString, _createDirIfNotExistent, _encode, _write, _setupNode } from "../helper";
 import { nodemonTemp, tsconfigTemp, packageTemp } from "../temp";
 import { dbConfigTemp, drizzleConfigTemp, schemaTemp, indexTemp } from "./temp";
 import { buildMidFuncs } from "./midfunc";
@@ -9,8 +9,9 @@ import { buildRoutes } from "./routes";
 export function buildServer(config: MidConfig)
 {
     const serverPath = config.server.path ?? './server';
+    _setupNode(["express", "cors", "dotenv", "zod"], serverPath);
     process.chdir(serverPath);
-    fs.writeFileSync('package.json', JSON.stringify({
+    _write('package.json', _encode({
         ...packageTemp,
         name: 'server',
         scripts: {
@@ -18,13 +19,13 @@ export function buildServer(config: MidConfig)
             'db:generate': "drizzle-kit generate:pg",
             'db:push': "drizzle-kit push:pg"
         }
-    }, null, 2).replace(/\\/g, '\\\\'));
-    fs.writeFileSync('tsconfig.json', JSON.stringify(tsconfigTemp, null, 2).replace(/\\/g, '\\\\'));
-    fs.writeFileSync('nodemon.json', JSON.stringify(nodemonTemp, null, 2).replace(/\\/g, '\\\\'));
+    }));
+    _write('tsconfig.json', _encode(tsconfigTemp));
+    _write('nodemon.json', _encode(nodemonTemp(["./src/index.ts"])));
     
     if (config.server.drizzle) // drizzle config
     {
-       fs.writeFileSync('drizzle.config.ts', arrayToString(drizzleConfigTemp(config.server.drizzle.config)));
+       _write('drizzle.config.ts', _arrayToString(drizzleConfigTemp(config.server.drizzle.config)));
     }
     else
     {
@@ -40,7 +41,7 @@ export function buildServer(config: MidConfig)
         {
             dockerLines.push(`${element[0]} ${element[1]}`);
         }
-        fs.writeFileSync('Dockerfile', arrayToString(dockerLines));
+        _write('Dockerfile', _arrayToString(dockerLines));
     }
     else
     {
@@ -57,7 +58,7 @@ export function buildServer(config: MidConfig)
         {
             envLines.push(`${key}=${config.server.secrets[key]}`);
         }
-        fs.writeFileSync('.env', arrayToString(envLines));
+        _write('.env', _arrayToString(envLines));
     }
     else
     {
@@ -66,25 +67,25 @@ export function buildServer(config: MidConfig)
             fs.unlinkSync('.env');
         }
     }
-    createDirIfNotExistent('./src');
+    _createDirIfNotExistent('./src');
     process.chdir('./src');
     buildMidFuncs(config);
     const temp = indexTemp(config.server);
-    fs.writeFileSync('index.ts', arrayToString(temp[0]));
+    _write('index.ts', _arrayToString(temp[0]));
     buildRoutes(temp[1]);
-    createDirIfNotExistent('./db');
+    _createDirIfNotExistent('./db');
     process.chdir('./db'); 
     if (config.server.drizzle)
     {
-        fs.writeFileSync('db.ts', arrayToString(dbConfigTemp(config.server.drizzle?.dbConfig)));
+        _write('db.ts', _arrayToString(dbConfigTemp(config.server.drizzle?.dbConfig)));
     }
     if (config.server.drizzle?.schemas)
     {
-        createDirIfNotExistent('./schemas');
+        _createDirIfNotExistent('./schemas');
         process.chdir('./schemas');
         for (const key in config.server.drizzle.schemas)
         {
-            fs.writeFileSync(`${key}.ts`, arrayToString(schemaTemp(config.server.drizzle.schemas[key], key)));
+            _write(`${key}.ts`, _arrayToString(schemaTemp(config.server.drizzle.schemas[key], key)));
         }
         process.chdir('..');
     }

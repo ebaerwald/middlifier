@@ -1,12 +1,12 @@
-import fs from 'fs';
-import { createDirIfNotExistent, arrayToString, setupNode } from './helper';
+import { _createDirIfNotExistent, _arrayToString, _setupNode, _encode, _write, _remove, _rename } from './helper';
 import { buildApp } from './app/app';
 import { buildServer } from './server/server';
 import type { Config } from 'drizzle-kit';
 import { PoolConfig } from 'pg';
-import { packageTemp, tsconfigTemp, nodemonTemp, midConfigTemp, indexTemp} from './temp';
+import { packageTemp, tsconfigTemp, nodemonTemp, midConfigTempProd, indexTempProd, midConfigTempDev, indexTempDev} from './temp';
 import { OptionsJson, OptionsUrlencoded } from 'body-parser';
 import { CorsOptions } from 'cors';
+import { $ } from 'bun';
 
 export type ReqConfig = {
     body?: {
@@ -123,37 +123,43 @@ export type FinalInnerRoute = {
 */
 export type FuncInfo = [string, string] | [string, string, string] | [string, string, string, string];
 
-
-
-
 export function init()
 {
-    setupNode(["nodemon", "middlifier", "typescript", "ts-node"], './gen');
+    const arg = process.argv.slice(2)[0];
+    let midConfigTemp = midConfigTempDev;
+    let indexTemp = indexTempDev;
+    if (arg == '-prod' || arg == '-p')
+    {
+        midConfigTemp = midConfigTempProd;
+        indexTemp = indexTempProd;
+    }
+    _setupNode(["middlifier", "typescript"], './gen');
     process.chdir('./gen');
-    fs.writeFileSync('nodemon.json', JSON.stringify(nodemonTemp, null, 2).replace(/\\/g, '\\\\'));
-    fs.writeFileSync('tsconfig.json', JSON.stringify(tsconfigTemp, null, 2).replace(/\\/g, '\\\\'));
-    fs.writeFileSync('package.json', JSON.stringify({
+    _write('nodemon.json', _encode(nodemonTemp(["./src/mid.config.ts"])));
+    _write('tsconfig.json', _encode(tsconfigTemp));
+    _write('package.json', _encode({
         ...packageTemp,
         name: 'gen'
-    }, null, 2).replace(/\\/g, '\\\\'));
-    createDirIfNotExistent('./src');
+    }));
+    _createDirIfNotExistent('./src');
     process.chdir('./src');
-    fs.writeFileSync('mid.config.ts', arrayToString(midConfigTemp));
-    fs.writeFileSync('index.ts', arrayToString(indexTemp));
+    _write('mid.config.ts', _arrayToString(midConfigTemp));
+    _write('index.ts', _arrayToString(indexTemp));
 }
 
 export function end(app: string, server: string)
 {
-    fs.renameSync(`./gen/${app}`, `./${app}`);
-    fs.renameSync(`./gen/${server}`, `./${server}`);
-    fs.rmSync('./gen', { recursive: true });
+    if (process.cwd().includes('gen'))
+    {
+        process.chdir('..');
+    }
+    _rename(`./gen/${app}`, `./${app}`);
+    _rename(`./gen/${server}`, `./${server}`);
+    _remove('./gen');
 }
 
 export function start(config: MidConfig)
 {
-    setupNode(["express", "nodemon", "cors", "dotenv", "zod"], config.server.path ?? 'server');
-    setupNode([], config.server.path ?? 'app');
     buildServer(config);
-    // console.log(process.cwd())
     buildApp(config);
 }

@@ -1,6 +1,6 @@
 import { MidConfig, ParamType, MidFuncs, MidFunc } from "..";
 import fs from 'fs';
-import { arrayToString } from "../helper";
+import { _arrayToString } from "../helper";
 
 export type FuncObj = {
     [path: string]: [string[], MidFunc[]]
@@ -84,7 +84,7 @@ export function buildMidFuncs(config: MidConfig)
                     }
                 }
                 if (!fs.existsSync(`./${path}`)) fs.mkdirSync(`./${path}`);
-                fs.writeFileSync(`./${path}/${name}.ts`, arrayToString([
+                fs.writeFileSync(`./${path}/${name}.ts`, _arrayToString([
                     'import { Request, Response, NextFunction } from "express";',
                     'import { z } from "zod"',
                     '',

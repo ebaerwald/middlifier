@@ -1,12 +1,16 @@
 import { MidConfig } from ".";
+import { _encode } from "./helper";
 
-export const nodemonTemp = {
+export function nodemonTemp(watch: string[])
+{
+  return {
     ext: "ts",
     ignore: [".git", "node_modules/**/node_modules", "./**/*.spec.ts"],
     execMap: {
         ts: "node --require ts-node/register"
     },
-    watch: ["./src"]
+    watch: watch
+  }
 }
 
 export const tsconfigTemp = {
@@ -18,6 +22,8 @@ export const tsconfigTemp = {
         "esModuleInterop": true,
         "moduleResolution": "Node",
         "strict": true,
+        "skipLibCheck": true,
+        "types": ["bun-types", "node"]
     },
     "include": [
         "src/**/*"
@@ -34,9 +40,8 @@ export const packageTemp = {
     "description": "",
     "main": "src/index.ts",
     "scripts": {
-        "build": "npx tsc",
-        "dev": "npx nodemon src/index.ts",
-        "start": "node dist/index.js"
+        "dev": "nodemon --exec bun run src/index.ts",
+        "start": "bun src/index.ts",
     },
     "keywords": [],
     "author": "",
@@ -84,15 +89,28 @@ const midConfigJSON: MidConfig = {
     "app": {}
   };
   
-export const midConfigTemp = [
+export const midConfigTempProd = [
     'import { MidConfig } from "middlifier";',
     '',
-    `export const config: MidConfig = ${JSON.stringify(midConfigJSON, null, 2).replace(/\\/g, '\\\\')};`,
+    `export const config: MidConfig = ${_encode(midConfigJSON)};`,
 ]
 
-export const indexTemp = [
+export const indexTempProd = [
     'import { start } from "middlifier";',
     'import { config } from "./mid.config";',
     '',
     'start(config);',
+];
+
+export const midConfigTempDev= [
+  'import { MidConfig } from "../../src/index";',
+  '',
+  `export const config: MidConfig = ${_encode(midConfigJSON)};`,
+]
+
+export const indexTempDev = [
+  'import { start } from "../../src/index";',
+  'import { config } from "./mid.config";',
+  '',
+  'start(config);',
 ];

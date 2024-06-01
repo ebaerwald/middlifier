@@ -1,5 +1,5 @@
 import { MidFuncs, Routes, InnerRoute, FinalRouteObj, FinalInnerRoute } from "..";
-import { createDirIfNotExistent, arrayToString } from "../helper";
+import { _createDirIfNotExistent, _arrayToString } from "../helper";
 import fs from 'fs';
 import path from 'path';
 
@@ -76,10 +76,10 @@ function writeRouteFile(path: string, content: string[])
         if (i === pathArr.length - 1)
         {
             const file = `${dir}.ts`;
-            fs.writeFileSync(file, arrayToString(content));
+            fs.writeFileSync(file, _arrayToString(content));
             continue;
         }
-        createDirIfNotExistent(dir);
+        _createDirIfNotExistent(dir);
     }
 }
 
