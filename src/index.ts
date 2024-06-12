@@ -6,7 +6,6 @@ import { PoolConfig } from 'pg';
 import { packageTemp, tsconfigTemp, nodemonTemp, midConfigTempProd, indexTempProd, midConfigTempDev, indexTempDev} from './temp';
 import { OptionsJson, OptionsUrlencoded } from 'body-parser';
 import { CorsOptions } from 'cors';
-import { $ } from 'bun';
 
 export type ReqConfig = {
     body?: {
@@ -21,7 +20,7 @@ export type ReqConfig = {
         [key: string]: { type: ParamType, required?: boolean };
     },
     params?: never,
-    dynamicRoute?: string
+    dynamicRoute?: [string, ParamType]
 };
 export type ParamType = 'string' | 'number' | 'boolean' | ['string', {enum?: string[]}] | ['string', {regex?: RegExp}] | ['number', {min?: number, max?: number, literal?: number[]}] | {
     [key: string]: ParamType
@@ -32,25 +31,39 @@ export type MidFunc = {
     req?: ReqConfig,
     res?: ResConfig,
 };
+export type Structure = {
+    routes?: Routes,
+    funcs?: MidFuncs
+}
+// export type MidFuncs = ([string, string, MidFunc, MidFuncs] | [string, string, MidFunc] | [string, string, MidFunc, MidFuncs, string])[];
 export type MidFuncs = {
-    [path: string]: {
-        [fileName: string]: {
-            [funcName: string]: MidFunc 
-        }
-    }
+    path: string,
+    name: string,
+    func: MidFunc,
+    funcs?: MidFuncs,
+    route?: string
+}[];
+// export type Routes = ([string, string, Structure] | [string, string, Structure, string])[];
+export type Routes = {
+    path: string,
+    name: string,
+    struct: Structure,
+    route?: string
+}[];
+export type Secrets = {
+    [key: string]: string
 };
-type Server = {
+
+export type Server = {
     port: number | string, // string if you get the variable from .env file
     path?: string,
     host?: string,
     ssl?: boolean,
-    set?: {
+    structure: Structure,
+    sets?: {
         [key: string]: any
     },
     cors?: CorsOptions,
-    funcs: MidFuncs,
-    indexFuncNames?: string[],
-    routes?: Routes,
     json?: OptionsJson,
     urlencoded?: OptionsUrlencoded,
     drizzle?: {
@@ -58,9 +71,7 @@ type Server = {
         dbConfig: PoolConfig,
         schemas?: Schemas
     },
-    secrets?: {
-        [key: string]: string
-    },
+    secrets?: Secrets,
     docker?: DockerConfig
 };
 export type rServer = Readonly<Server>;
@@ -90,38 +101,6 @@ export type MidConfig = Readonly<{
     server: Server,
     app: App
 }>
-
-/**
- * @param {string} path Path of the routes, for the index routes use "-" 
- * @param {InnerRoute} InnerRoute
- */
-export type Routes = {
-    [path: string]: InnerRoute
-}
-
-/**
- * @param {string} route Routes can be nested.
- * @param {InnerRoute} InnerRoute
- */
-export type InnerRoute = {
-    [route: string]: InnerRoute | ([string] | [string, string])[] // funcName or funcName and path, if path search path in Routes, if not search funcName in Midfuncs
-}
-
-export type FinalRouteObj = {
-    [path: string]: FinalInnerRoute
-}
-
-export type FinalInnerRoute = {
-    [route: string]: FinalInnerRoute | FuncInfo[]
-}
-
-/**
-* @param {string} funcPath - first
-* @param {string} funcName - second
-* @param {string | undefined} method - third
-* @param {string | undefined} dynamicRoute - fourth
-*/
-export type FuncInfo = [string, string] | [string, string, string] | [string, string, string, string];
 
 export function init()
 {
@@ -161,5 +140,5 @@ export function end(app: string, server: string)
 export function start(config: MidConfig)
 {
     buildServer(config);
-    buildApp(config);
+    // buildApp(config);
 }

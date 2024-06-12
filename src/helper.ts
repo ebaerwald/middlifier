@@ -52,6 +52,17 @@ export function _decode(content: any)
 export function _write(path: string, content: string)
 {
     try {
+        const pathSplit = path.split('/');
+        let currentPath = '.'; 
+        for (let i = 1; i < pathSplit.length - 1; i++)
+        {
+            const path = pathSplit[i];
+            currentPath += `/${path}`;
+            if (!fs.existsSync(currentPath))
+            {
+                fs.mkdirSync(currentPath);
+            }
+        }
         fs.writeFileSync(path, content);
         return true;
     }

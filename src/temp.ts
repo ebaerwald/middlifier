@@ -1,4 +1,4 @@
-import { MidConfig } from ".";
+import { MidConfig, MidFunc } from ".";
 import { _encode } from "./helper";
 
 export function nodemonTemp(watch: string[])
@@ -61,29 +61,8 @@ export const packageTemp = {
 const midConfigJSON: MidConfig = {
     "server": {
       "port": 3000,
-      "funcs": {
-        "func": {
-          "user": {
-            "getUser": {
-              "req": {
-                "body": {
-                  "name": {
-                    "type": [
-                      "string"
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      routes: {
-        "-": {
-          user: {
-            get: [['getUser']]
-          }
-        }
+      structure: {
+        
       }
     },
     "app": {}
