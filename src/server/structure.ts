@@ -1,5 +1,5 @@
 import { CorsOptions } from 'cors';
-import { Server, MidFuncs, Secrets, Routes, MidFunc, ParamType, ReqConfig } from '../index';
+import { Server, MidFuncs, Secrets, Routes, MidFunc, ParamType, ReqConfig, Methods, ResConfig } from '../index';
 import { _arrayToString, _write, _encode } from '../helper';
 import { OptionsJson, OptionsUrlencoded } from 'body-parser';
 import path from 'path';
@@ -23,6 +23,14 @@ type FuncInfo = {
 }
 
 type FuncsInfo = FuncInfo[];
+
+type TestObj = {
+    [route: string]: [
+        Methods, // method
+        ReqConfig, 
+        ReqConfig
+    ] | TestObj
+}
 
 export function buildServerStructure(server: Server)
 {
@@ -56,8 +64,8 @@ function buildEntryFile(
             if (!imports[path]) imports[path] = [];
             imports[path].push(name);
             bottomLines.push(`app.use(${route}${name});`);
-            const subRoutes = struct.routes;
-            if (subRoutes) buildRoutes(subRoutes);
+            buildRoute(path, name, getSubFuncs(struct.funcs ?? []), getSubRoutes(struct.routes ?? []));
+            buildRoutes(struct.routes ?? [], `${path}/${name}.ts`);
         }
     }
     if (funcs)
@@ -298,6 +306,35 @@ function getZodLines(data: any, paramType: keyof ReqConfig)
         `   ${paramLocation}Schema.parse(${paramLocation});`,
         `   const { ${paramNames.join(', ')} } = ${paramLocation};`
     ]
+}
+
+
+function buildTestsAndDoku(testObj: TestObj, testLines: string[] = [], dokuLines: string[] = [])
+{
+    for (const route in testObj)
+    {
+        const value = testObj[route];
+        if (Array.isArray(value))
+        {
+            const [method, req, res] = value;
+            testLines.push(...buildTest(route, method, req, res));
+            dokuLines.push(...buildDoku(route, method, req, res));
+        }
+        else
+        {
+            return buildTestsAndDoku(value, testLines, dokuLines);
+        }
+    }
+}
+
+function buildTest(route: string, method: Methods, req: ReqConfig, res: ResConfig): string[]
+{
+    return [];
+}
+
+function buildDoku(route: string, method: Methods, req: ReqConfig, res: ResConfig): string[]
+{
+    return [];
 }
 
 function convertParamTypeToZodTypeAnyString(type: ParamType, frontStr: string = '', backStr: string = '') {

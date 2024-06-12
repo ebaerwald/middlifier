@@ -25,9 +25,10 @@ export type ReqConfig = {
 export type ParamType = 'string' | 'number' | 'boolean' | ['string', {enum?: string[]}] | ['string', {regex?: RegExp}] | ['number', {min?: number, max?: number, literal?: number[]}] | {
     [key: string]: ParamType
 } | [ParamType];
-type ResConfig = {};
+export type ResConfig = {};
+export type Methods = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD' | 'CONNECT' | 'TRACE';
 export type MidFunc = {
-    method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD' | 'CONNECT' | 'TRACE',
+    method?: Methods,
     req?: ReqConfig,
     res?: ResConfig,
 };
