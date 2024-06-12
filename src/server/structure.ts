@@ -1,20 +1,17 @@
 import { CorsOptions } from 'cors';
-import { Server, Structure, MidFuncs, Secrets, Routes, MidFunc, ParamType, ReqConfig } from '../index';
+import { Server, MidFuncs, Secrets, Routes, MidFunc, ParamType, ReqConfig } from '../index';
 import { _arrayToString, _write, _encode } from '../helper';
 import { OptionsJson, OptionsUrlencoded } from 'body-parser';
-import fs from 'fs';
 import path from 'path';
 
 type Imports = {
     [path: string]: string[];
 }
 
-type RouteContent = [string[], RouteInfo];
-
 type RouteInfo = {
     name: string,
     route?: string
-    }
+}
     
 type RoutesInfo = RouteInfo[];
 
@@ -59,7 +56,8 @@ function buildEntryFile(
             if (!imports[path]) imports[path] = [];
             imports[path].push(name);
             bottomLines.push(`app.use(${route}${name});`);
-            buildRoutes(struct);
+            const subRoutes = struct.routes;
+            if (subRoutes) buildRoutes(subRoutes);
         }
     }
     if (funcs)
@@ -98,24 +96,24 @@ function buildEntryFile(
     ]))
 }
 
-function buildRoutes(structure: Structure)
+function buildRoutes(routes: Routes, pathFromEntryPoint: string = '')
 {
-    const { routes } = structure;
-    if (routes)
+    for (const route of routes)
     {
-        for (const route of routes)
-        {
-            
-        }
+        const {path, name, struct} = route;
+        const subFuncs = getSubFuncs(struct.funcs ?? []);
+        const subRoutes = getSubRoutes(struct.routes ?? []);
+        const currentPath = getPathFromEntryPoint(pathFromEntryPoint, path);
+        buildRoute(`${currentPath}.ts`, name, subFuncs, subRoutes);
     }
 }
 
-function buildRoute(path: string, name: string, subFuncs: [string[], FuncsInfo], subRoutes: [string[], RoutesInfo])
+function buildRoute(path: string, routeName: string, subFuncs: [string[], FuncsInfo], subRoutes: [string[], RoutesInfo])
 {
     const [routesImports, routesInfo] = subRoutes;
     const [funcsImports, funcsInfo] = subFuncs;
     const content: string[] = [
-        `export const ${name} = Router();`,
+        `export const ${routeName} = Router();`,
         '{',
 
     ];
@@ -123,12 +121,13 @@ function buildRoute(path: string, name: string, subFuncs: [string[], FuncsInfo],
     {
         const {name, route} = r;
         route ? `${route}, `: '';
-        content.push(`app.use(${route}${name});`);
+        content.push(`${routeName}.use(${route}${name});`);
     }
     for (const f of funcsInfo)
     {
-        const {name, route, dynamicRoute, method} = f
-        content.push()
+        let {name, route, dynamicRoute, method} = f
+        dynamicRoute = dynamicRoute ? `/:${dynamicRoute}` : '';
+        content.push(`${routeName}.route(${`${route}${dynamicRoute}` ?? ''}).${method ?? 'all'}(${name});`);
     }
 
     _write(path, _arrayToString([
@@ -139,43 +138,6 @@ function buildRoute(path: string, name: string, subFuncs: [string[], FuncsInfo],
         ...content
     ]))
 }
-
-// function getRouteContent(structure: Structure)
-// {
-//     const { routes, funcs } = structure;
-//     const routerImports: Imports = {};
-//     const routeContent: RouteInfo = [];
-//     const importArray: string[] = [];
-//     if (routes)
-//     {
-//         for (const r of routes)
-//         {
-//             const {path, name, route} = r;
-//             if (!routerImports[path]) routerImports[path] = [];
-//             routerImports[path].push(name);
-//             routeContent.push(route ? [name, route] : [name]);
-//         }
-//     }
-//     if (funcs)
-//     {
-//         for (const f of funcs)
-//         {
-//             const {name, func, route} = f;
-//             const method = func.method;
-//             const dynamicRoute = func.req?.dynamicRoute;
-//             const content: [string] | [string, string] | [string, string, string] | [string, string, string, string] = [name];
-//             if (route) content.push(route);
-//             if (method) content.push(method);
-//             if (dynamicRoute) content.push(dynamicRoute[0]);
-//             routeContent.push(content);
-//         }
-//     }
-//     for (const path in routerImports)
-//     {
-//         importArray.push(`import { ${routerImports[path].join(', ')} } from "${path}";`);
-//     }
-//     return [importArray, routeContent];
-// }
 
 function buildMidFuncs(midFuncs: MidFuncs, pathFromEntryPoint: string = '')
 {
