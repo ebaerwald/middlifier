@@ -28,7 +28,7 @@ type TestObj = {
     [route: string]: [
         Methods, // method
         ReqConfig, 
-        ReqConfig
+        ResConfig
     ] | TestObj
 }
 

@@ -2,9 +2,7 @@ import { MidConfig } from "../index";
 import fs from 'fs';
 import { _arrayToString, _createDirIfNotExistent, _encode, _write, _setupNode } from "../helper";
 import { nodemonTemp, tsconfigTemp, packageTemp } from "../temp";
-import { dbConfigTemp, drizzleConfigTemp, schemaTemp, indexTemp } from "./temp";
-import { buildMidFuncs } from "./midfunc";
-import { buildRoutes } from "./routes";
+import { dbConfigTemp, drizzleConfigTemp, schemaTemp } from "./temp";
 import { buildServerStructure } from "./structure";
 
 export function buildServer(config: MidConfig)
