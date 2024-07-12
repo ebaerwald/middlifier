@@ -1,12 +1,8 @@
 import { CorsOptions } from 'cors';
 import { Server, MidFuncs, Secrets, Routes, MidFunc, ParamType, ReqConfig, Methods, ResConfig } from '../index';
-import { _arrayToString, _write, _encode } from '../helper';
+import { _arrayToString, _write, _encode, type Imports, _getVarValue } from '../helper';
 import { OptionsJson, OptionsUrlencoded } from 'body-parser';
 import path from 'path';
-
-type Imports = {
-    [path: string]: string[];
-}
 
 type RouteInfo = {
     name: string,
@@ -17,12 +13,24 @@ type RoutesInfo = RouteInfo[];
 
 type FuncInfo = {
     name: string,
-    method?: string,
+    req: ReqConfig,
+    path: boolean,
+    method?: Methods,
     route?: string,
     dynamicRoute?: string
 }
 
 type FuncsInfo = FuncInfo[];
+
+type RouteFuncInfo = {
+    path: string,
+    name: string,
+    req: ReqConfig,
+    method?: Methods,
+    route?: string
+}
+
+type RouteFuncsInfo = RouteFuncInfo[];
 
 type TestObj = {
     [route: string]: [
@@ -34,50 +42,58 @@ type TestObj = {
 
 export function buildServerStructure(server: Server)
 {
-    const { structure, cors, secrets, port, json, urlencoded, sets } = server;
+    const { structure, cors, secrets, port, json, urlencoded, morgan, sets } = server;
     const { routes, funcs } = structure;
-    buildEntryFile(routes, funcs, cors, secrets, port, json, urlencoded, sets);
+    buildEntryFile(routes, funcs, cors, secrets, port, json, urlencoded, morgan, sets);
 }
 
 function buildEntryFile(
-    routes: Routes | undefined, 
+    rout: Routes | undefined, 
     funcs: MidFuncs | undefined, 
     cors: CorsOptions | undefined, 
     secrets: Secrets | undefined, 
     port: string | number, 
     json: OptionsJson | undefined, 
     urlencoded: OptionsUrlencoded | undefined,
+    morgan: string | undefined,
     sets: { [key: string]: any } | undefined
 )
 {
+    let configPointer = ["server", "structure"];
+    let f = funcs;
     const bottomLines: string[] = [];
     const topLines: string[] = ['import express from "express";'];
     if (cors) topLines.push('import cors from "cors";');
     if (secrets) topLines.push('import dotenv from "dotenv";', 'dotenv.config();');
+    if (morgan) topLines.push('import morgan from "morgan";');
     let imports: Imports = {};
-    if (routes)
+    if (rout)
     {
-        for (const r of routes)
+        for (let j = 0; j < rout.length; j++)
         {
-            const {path, name, struct, route} = r;
+            const {path, name, routes, route} = rout[j];
             route ? `${route}, `: '';
             if (!imports[path]) imports[path] = [];
             imports[path].push(name);
             bottomLines.push(`app.use(${route}${name});`);
-            buildRoute(path, name, getSubFuncs(struct.funcs ?? []), getSubRoutes(struct.routes ?? []));
-            buildRoutes(struct.routes ?? [], `${path}/${name}.ts`);
+            buildRoute(path, name, getSubFuncsWithRouteKey(name, `${path}.ts`, funcs ?? []), getSubRoutes(routes ?? []));
+            buildRoutes(routes ?? [], funcs ?? [], `${path}.ts`);
         }
     }
-    if (funcs)
+    if (f)
     {
-        for (const f of funcs)
+        for (let i = 0; i < f.length; i++)
         {
-            const {path, name, func, funcs} = f;
-            if (!imports[path]) imports[path] = [];
-            imports[path].push(name);
-            bottomLines.push(`app.use(${name});`);
-            buildMidFunc(`${path}/${name}.ts`, name, func, getSubFuncs(funcs ?? [])[0]);
-            buildMidFuncs(funcs ?? [], `${path}/${name}.ts`);
+            configPointer.push(...["funcs", i.toString()])
+            let {path, name, req, funcs} = f[i];
+            if (path)
+            {
+                if (!imports[path]) imports[path] = [];
+                imports[path].push(name);
+                bottomLines.push(`app.use(${name});`);
+                buildMidFunc(`${path}.ts`, name, req ?? {}, getSubFuncs(funcs ?? []), [...configPointer]);
+                buildMidFuncs(funcs ?? [], `${path}.ts`, [...configPointer]);
+            }
         }
     }
     for (const path in imports)
@@ -88,6 +104,7 @@ function buildEntryFile(
     if (cors) bottomLines.push(`app.use(cors(${_encode(cors)}));`);
     if (json) bottomLines.push(`app.use(express.json(${_encode(json)};`);
     if (urlencoded) bottomLines.push(`app.use(express.urlencoded(${_encode(urlencoded)}));`);
+    if (morgan) bottomLines.push(`app.use(morgan(${morgan}));`);
     for (const setKey in sets)
     {
         const set = sets[setKey];
@@ -104,19 +121,19 @@ function buildEntryFile(
     ]))
 }
 
-function buildRoutes(routes: Routes, pathFromEntryPoint: string = '')
+function buildRoutes(rout: Routes, funcs: MidFuncs, pathFromEntryPoint: string = '')
 {
-    for (const route of routes)
+    for (let i = 0; i < rout.length; i++)
     {
-        const {path, name, struct} = route;
-        const subFuncs = getSubFuncs(struct.funcs ?? []);
-        const subRoutes = getSubRoutes(struct.routes ?? []);
+        const route = rout[i];
+        const {path, name, routes} = route;
+        const subRoutes = getSubRoutes(routes ?? []);
         const currentPath = getPathFromEntryPoint(pathFromEntryPoint, path);
-        buildRoute(`${currentPath}.ts`, name, subFuncs, subRoutes);
+        buildRoute(`${currentPath}.ts`, name, getSubFuncsWithRouteKey(name, `${currentPath}.ts`, funcs), subRoutes);
     }
 }
 
-function buildRoute(path: string, routeName: string, subFuncs: [string[], FuncsInfo], subRoutes: [string[], RoutesInfo])
+function buildRoute(path: string, routeName: string, subFuncs: [string[], RouteFuncsInfo], subRoutes: [string[], RoutesInfo])
 {
     const [routesImports, routesInfo] = subRoutes;
     const [funcsImports, funcsInfo] = subFuncs;
@@ -133,8 +150,8 @@ function buildRoute(path: string, routeName: string, subFuncs: [string[], FuncsI
     }
     for (const f of funcsInfo)
     {
-        let {name, route, dynamicRoute, method} = f
-        dynamicRoute = dynamicRoute ? `/:${dynamicRoute}` : '';
+        let {name, route, req, method} = f
+        const dynamicRoute = req.dynamicRoute ? `/:${req.dynamicRoute[0]}` : '';
         content.push(`${routeName}.route(${`${route}${dynamicRoute}` ?? ''}).${method ?? 'all'}(${name});`);
     }
 
@@ -147,14 +164,19 @@ function buildRoute(path: string, routeName: string, subFuncs: [string[], FuncsI
     ]))
 }
 
-function buildMidFuncs(midFuncs: MidFuncs, pathFromEntryPoint: string = '')
+function buildMidFuncs(midFuncs: MidFuncs, pathFromEntryPoint: string = '', configPointer: string[])
 {
-    for (const f of midFuncs)
+    configPointer.push("funcs");
+    for (let i = 0; i < midFuncs.length; i++)
     {
-        const {path, name, func, funcs} = f;
-        const currentPath = getPathFromEntryPoint(pathFromEntryPoint, path);
-        buildMidFunc(`${currentPath}.ts`, name, func, getSubFuncs(funcs ?? [])[0]);
-        if (funcs) return buildMidFuncs(funcs, currentPath);
+        const f = midFuncs[i];
+        const {path, name, req, funcs} = f;
+        if (path)
+        {
+            const currentPath = getPathFromEntryPoint(pathFromEntryPoint, path);
+            buildMidFunc(`${currentPath}.ts`, name, req ?? {}, getSubFuncs(funcs ?? []), [...configPointer, i.toString()]);
+            if (funcs) return buildMidFuncs(funcs, currentPath, [...configPointer, i.toString()]);
+        }
     }
 }
 
@@ -203,39 +225,79 @@ function getSubRoutes(routes: Routes): [string[], RoutesInfo]
     return [importArray, routesInfo]
 }
 
-
-function getSubFuncs(midFuncs: MidFuncs): [string[], FuncsInfo]
+function getSubFuncsWithRouteKey(key: string, routePath: string, f: MidFuncs, cPath: string = '', importsObj: Imports = {}, funcsInfo: RouteFuncsInfo = []): [string[], RouteFuncsInfo]
 {
-    const importArray: string[] = [];
-    const subFuncs: Imports = {};
-    const funcsInfo: FuncsInfo = [];
-
-    for (const f of midFuncs)
+    for (const func of f)
     {
-        const {path, name, func, route} = f;
-        if (!subFuncs[path]) subFuncs[path] = [];
-        subFuncs[path].push(name);
-        const funcInfo: FuncInfo = {
-            name: name,
-            method: func.method,
-            route: route
-            };
-        const dynamicRoute = func.req?.dynamicRoute;
-        if (Array.isArray(dynamicRoute))
+        const {path, name, req, funcs, route, routeKey, method} = func;
+        const currentFuncPath = getPathFromEntryPoint(cPath, path ?? '');
+        const routeToFuncPath = getPathFromEntryPoint(routePath, currentFuncPath);
+        if (routeKey === key)
         {
-            funcInfo['dynamicRoute'] = dynamicRoute[0];
+            if (!importsObj[cPath]) importsObj[cPath] = [];
+            importsObj[cPath].push(name);
+            funcsInfo.push({
+                path: routeToFuncPath,
+                name: name,
+                req: req ?? {},
+                method: method,
+                route: route
+            });
         }
+        return getSubFuncsWithRouteKey(key, routePath, funcs ?? [], currentFuncPath, importsObj, funcsInfo);
     }
-    for (const path in subFuncs)
+    const importArr: string[] = [];
+    for (const path in importsObj)
     {
-        importArray.push(`import { ${subFuncs[path].join(', ')} } from "${path}";`);
+        importArr.push(`import { ${importsObj[path].join(', ')} } from "${path}";`);
     }
-    return [importArray, funcsInfo];
+    return [importArr, funcsInfo];
 }
 
-function buildMidFunc(path: string, name: string, midFunc: MidFunc, subFuncImports: string[])
+function getSubFuncs(midFuncs: MidFuncs, imports: Imports = {}, funcsInfo: FuncsInfo = []): [string[], FuncsInfo]
 {
-    const { req } = midFunc;
+    const importArr: string[] = [];
+    for (let i = 0; i < midFuncs.length; i++)
+    {
+        const {path, name, method, funcs, route, req} = midFuncs[i];
+        const funcInfo: FuncInfo = {
+            name: name,
+            method: method,
+            route: route,
+            req: req ?? {},
+            path: true
+        };
+        if (path)
+        {
+            if (!imports[path]) imports[path] = [];
+            imports[path].push(name);
+            const dynamicRoute = req?.dynamicRoute;
+            if (Array.isArray(dynamicRoute))
+            {
+                funcInfo['dynamicRoute'] = dynamicRoute[0];
+            }
+            funcsInfo.push(funcInfo);
+        }
+        else
+        {
+            funcInfo.path = false;
+            funcsInfo.push(funcInfo);
+
+            return getSubFuncs([...midFuncs.slice(i + 1, midFuncs.length) ,...(funcs ?? [])], imports, funcsInfo);
+        }
+    }
+    for (const path in imports)
+    {
+        importArr.push(`import { ${imports[path].join(', ')} } from "${path}";`);
+    }
+    return [importArr, funcsInfo];
+}
+
+function buildMidFunc(path: string, name: string, req: ReqConfig, subFuncs: [string[], FuncsInfo], configPointer: string[])
+{
+    const subFuncImports = subFuncs[0];
+    const funcsInfo = subFuncs[1];
+    configPointer.push(...["func", "req"]);
     const topLines: string[] = [
         'import { Request, Response, NextFunction } from "express";',
         'import { z } from "zod";',
@@ -244,59 +306,74 @@ function buildMidFunc(path: string, name: string, midFunc: MidFunc, subFuncImpor
     const funcLines: string[] = [];
     if (req)
     {
-        const dynamicRoute = req.dynamicRoute;
-        const body = req.body;
-        const params = req.params;
+        const { dynamicRoute, params, body } = req;
+        funcLines.push(_arrayToString(['', `export async function ${name}(req: Request, res: Response, next: NextFunction) {`]))
         if (dynamicRoute)
         {
-            funcLines.push(...getZodLines(req['dynamicRoute'], 'dynamicRoute'));
+            funcLines.push(...getZodLines(req['dynamicRoute'], 'dynamicRoute', [...configPointer, "dynamicRoute"]));
         }
         else if (params)
         {
-            funcLines.push(...getZodLines(req['params'], 'params'));
+            funcLines.push(...getZodLines(req['params'], 'params', [...configPointer, "params"]));
         }
         if (body)
         {
-            funcLines.push(...getZodLines(req['body'], 'body'));
+            funcLines.push(...getZodLines(req['body'], 'body', [...configPointer, "body"]));
+        }
+        funcLines.push('}');
+    }
+    const subFuncLines: string[] = []
+    for (const funcInfo of funcsInfo)
+    {
+        const { path, req, name } = funcInfo;
+        if (!path && req)
+        {
+            const { dynamicRoute, body, params } = req;
+            subFuncLines.push(_arrayToString(['', `export async function ${name}(req: Request, res: Response, next: NextFunction) {`]));
+            if (dynamicRoute)
+            {
+                subFuncLines.push(...getZodLines(req['dynamicRoute'], 'dynamicRoute', [...configPointer, "dynamicRoute"]));
+            }
+            else if (params)
+            {
+                subFuncLines.push(...getZodLines(req['params'], 'params', [...configPointer, "params"]));
+            }
+            if (body)
+            {
+                subFuncLines.push(...getZodLines(req['body'], 'body', [...configPointer, "body"]));
+            }
+            subFuncLines.push('}');
         }
     }
     _write(path, _arrayToString([
         ...topLines,
-        '',
-        `export async function ${name}(req: Request, res: Response, next: NextFunction) {`,
         ...funcLines,
-        '}',
+        ...subFuncLines
     ]));
 }
 
-function getZodLines(data: any, paramType: keyof ReqConfig)
+function getZodLines(data: any, paramType: keyof ReqConfig, configPointer: string[])
 {
     let frontStr = 'z.object({ ';
     let backStr = '})';
     const paramNames: string[] = [];
     if (paramType === 'params' || paramType === 'body')
     {
+        const zodElements: string[] = [];
         for (const key in data)
         {
             paramNames.push(key);
-            const param = data[key];
-            const required = param['required'];
-            const type = param['type'];
-            if (required === true)
-            {
-                frontStr += `${key}: ${convertParamTypeToZodTypeAnyString(type)}, `
-            }
-            else
-            {
-                frontStr += `${key}: ${convertParamTypeToZodTypeAnyString(type)}.optional(), `
-            }
+            const type = _getVarValue('../../src/mid.config.ts', [...configPointer, key, "type"].join("."));
+            zodElements.push(`${key}: ${type}`);
         }
+        frontStr += zodElements.join(', ');
     }
     else
     {
-        const [ paramName, type ] = data;
+        let [ paramName, type ] = data;
+        type = _encode(type);
         paramNames.push(paramName);
-        frontStr += `${paramName}: ${convertParamTypeToZodTypeAnyString(type)}, `
+        frontStr += `${paramName}: ${type}, `
     }
     const paramLocation = paramType === 'dynamicRoute' ? 'params' : paramType;
     const zodStr = frontStr + backStr;
@@ -335,47 +412,4 @@ function buildTest(route: string, method: Methods, req: ReqConfig, res: ResConfi
 function buildDoku(route: string, method: Methods, req: ReqConfig, res: ResConfig): string[]
 {
     return [];
-}
-
-function convertParamTypeToZodTypeAnyString(type: ParamType, frontStr: string = '', backStr: string = '') {
-    if (Array.isArray(type) && type.length === 1) {
-        frontStr += 'z.array(';
-        backStr += ')';
-        return convertParamTypeToZodTypeAnyString(type[0], frontStr, backStr);
-    }
-    else if (Array.isArray(type) && type.length === 2) {
-        const innerType = type[0];
-        const valueValidator = type[1];
-        if (innerType === 'string')
-        {
-            const validator = valueValidator as {enum?: string[], regex?: string};
-            const regex = validator.regex ? `.regex(${validator.regex})` : '';
-            const content = validator.enum ? `z.enum(${JSON.stringify(validator.enum)})${regex}` : `z.string()${regex}`;
-            return frontStr + content + backStr;
-        }
-        else if (innerType === 'number')
-        {
-            const validator = valueValidator as {min?: number, max?: number};
-            const min = validator.min ? `.min(${validator.min})` : '';
-            const max = validator.max ? `.max(${validator.max})` : '';
-            return frontStr + `z.number()${min}${max}` + backStr;
-        }
-    }
-    else if (typeof type === 'object' && type !== null) {
-        frontStr += 'z.object({';
-        backStr += '})';
-        let innerStr = '';
-        for (const key in type) {
-            innerStr += `${key}: ${convertParamTypeToZodTypeAnyString(type[key])}, `;
-        }
-        return frontStr + innerStr.slice(0, -2) + backStr;
-    } else {
-        if (type == 'string') {
-            return frontStr + 'z.string()' + backStr;
-        } else if (type == 'number') {
-            return frontStr + 'z.number()' + backStr;
-        } else {
-            return frontStr + 'z.boolean()' + backStr;
-        }
-    }
 }

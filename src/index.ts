@@ -6,57 +6,59 @@ import { PoolConfig } from 'pg';
 import { packageTemp, tsconfigTemp, nodemonTemp, midConfigTempProd, indexTempProd, midConfigTempDev, indexTempDev} from './temp';
 import { OptionsJson, OptionsUrlencoded } from 'body-parser';
 import { CorsOptions } from 'cors';
+import { ZodTypeAny } from 'zod';
 
 export type ReqConfig = {
     body?: {
-        [key: string]: { type: ParamType, required?: boolean };
+        [key: string]: { type: ZodTypeAny };
     },
     params?: {
-        [key: string]: { type: ParamType, required?: boolean, urlencoded?: boolean };
+        [key: string]: { type: ZodTypeAny, urlencoded?: boolean };
     },
     dynamicRoute?: never
 } | {
     body?: {
-        [key: string]: { type: ParamType, required?: boolean };
+        [key: string]: { type: ZodTypeAny };
     },
     params?: never,
-    dynamicRoute?: [string, ParamType]
+    dynamicRoute?: [string, ZodTypeAny]
 };
 export type ParamType = 'string' | 'number' | 'boolean' | ['string', {enum?: string[]}] | ['string', {regex?: RegExp}] | ['number', {min?: number, max?: number, literal?: number[]}] | {
     [key: string]: ParamType
 } | [ParamType];
-export type ResConfig = {};
-export type Methods = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD' | 'CONNECT' | 'TRACE';
-export type MidFunc = {
-    method?: Methods,
-    req?: ReqConfig,
-    res?: ResConfig,
+export type ResConfig = {
+    [status: number]: {}
 };
+export type Methods = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD' | 'CONNECT' | 'TRACE';
 export type Structure = {
     routes?: Routes,
     funcs?: MidFuncs
 }
-// export type MidFuncs = ([string, string, MidFunc, MidFuncs] | [string, string, MidFunc] | [string, string, MidFunc, MidFuncs, string])[];
-export type MidFuncs = {
-    path: string,
-    name: string,
-    func: MidFunc,
+export type MidFunc = {
+    name: string, // name of the function
+    path?: string, // relative path to the file
+    method?: Methods,
+    req?: ReqConfig,
+    res?: ResConfig,
     funcs?: MidFuncs,
-    route?: string
-}[];
-// export type Routes = ([string, string, Structure] | [string, string, Structure, string])[];
-export type Routes = {
-    path: string,
+    route?: string // relative route to the routeKey
+    routeKey?: string // identifier for the routes
+} 
+export type MidFuncs = MidFunc[];
+export type Route = {
+    path: string, 
     name: string,
-    struct: Structure,
-    route?: string
-}[];
+    routes?: Routes,
+    route: string // route for upper route 
+}
+export type Routes = Route[];
+
 export type Secrets = {
     [key: string]: string
 };
 
 export type Server = {
-    port: number | string, // string if you get the variable from .env file
+    port: number | string,
     path?: string,
     host?: string,
     ssl?: boolean,
@@ -67,6 +69,7 @@ export type Server = {
     cors?: CorsOptions,
     json?: OptionsJson,
     urlencoded?: OptionsUrlencoded,
+    morgan?: string,
     drizzle?: {
         config: Config,
         dbConfig: PoolConfig,
@@ -141,5 +144,4 @@ export function end(app: string, server: string)
 export function start(config: MidConfig)
 {
     buildServer(config);
-    // buildApp(config);
 }
