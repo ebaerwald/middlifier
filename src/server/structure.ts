@@ -75,9 +75,9 @@ function buildEntryFile(
             route ? `${route}, `: '';
             if (!imports[path]) imports[path] = [];
             imports[path].push(name);
-            bottomLines.push(`app.use(${route}${name});`);
-            buildRoute(path, name, getSubFuncsWithRouteKey(name, `${path}.ts`, funcs ?? []), getSubRoutes(routes ?? []));
-            buildRoutes(routes ?? [], funcs ?? [], `${path}.ts`);
+            bottomLines.push(`app.use("${route}", ${name});`);
+            buildRoute(`${path}.ts`, name, getSubFuncsWithRouteKey(name, path, funcs ?? []), getSubRoutes(routes ?? []));
+            buildRoutes(routes ?? [], funcs ?? [], path);
         }
     }
     if (f)
@@ -85,13 +85,13 @@ function buildEntryFile(
         for (let i = 0; i < f.length; i++)
         {
             configPointer.push(...["funcs", i.toString()])
-            let {path, name, req, funcs} = f[i];
+            let {path, name, req, funcs, middleware, res} = f[i];
             if (path)
             {
                 if (!imports[path]) imports[path] = [];
                 imports[path].push(name);
-                bottomLines.push(`app.use(${name});`);
-                buildMidFunc(`${path}.ts`, name, req ?? {}, getSubFuncs(funcs ?? []), [...configPointer]);
+                if (middleware) bottomLines.push(`app.use(${name});`);
+                buildMidFunc(`${path}.ts`, name, req ?? {}, res ?? {}, getSubFuncs(funcs ?? []), [...configPointer]);
                 buildMidFuncs(funcs ?? [], `${path}.ts`, [...configPointer]);
             }
         }
@@ -129,7 +129,7 @@ function buildRoutes(rout: Routes, funcs: MidFuncs, pathFromEntryPoint: string =
         const {path, name, routes} = route;
         const subRoutes = getSubRoutes(routes ?? []);
         const currentPath = getPathFromEntryPoint(pathFromEntryPoint, path);
-        buildRoute(`${currentPath}.ts`, name, getSubFuncsWithRouteKey(name, `${currentPath}.ts`, funcs), subRoutes);
+        buildRoute(`${currentPath}.ts`, name, getSubFuncsWithRouteKey(name, currentPath, funcs), subRoutes);
     }
 }
 
@@ -137,22 +137,19 @@ function buildRoute(path: string, routeName: string, subFuncs: [string[], RouteF
 {
     const [routesImports, routesInfo] = subRoutes;
     const [funcsImports, funcsInfo] = subFuncs;
-    const content: string[] = [
-        `export const ${routeName} = Router();`,
-        '{',
-
-    ];
+    const content: string[] = [`export const ${routeName} = Router();`, ''];
     for (const r of routesInfo)
     {
         const {name, route} = r;
         route ? `${route}, `: '';
-        content.push(`${routeName}.use(${route}${name});`);
+        content.push(`${routeName}.use("${route}", ${name});`);
     }
     for (const f of funcsInfo)
     {
         let {name, route, req, method} = f
         const dynamicRoute = req.dynamicRoute ? `/:${req.dynamicRoute[0]}` : '';
-        content.push(`${routeName}.route(${`${route}${dynamicRoute}` ?? ''}).${method ?? 'all'}(${name});`);
+        const finalRoute = route ? `${route}${dynamicRoute}` : '""';
+        content.push(`${routeName}.route(${finalRoute}).${method?.toLowerCase() ?? 'all'}(${name});`);
     }
 
     _write(path, _arrayToString([
@@ -170,11 +167,11 @@ function buildMidFuncs(midFuncs: MidFuncs, pathFromEntryPoint: string = '', conf
     for (let i = 0; i < midFuncs.length; i++)
     {
         const f = midFuncs[i];
-        const {path, name, req, funcs} = f;
+        const {path, name, req, funcs, res} = f;
         if (path)
         {
             const currentPath = getPathFromEntryPoint(pathFromEntryPoint, path);
-            buildMidFunc(`${currentPath}.ts`, name, req ?? {}, getSubFuncs(funcs ?? []), [...configPointer, i.toString()]);
+            buildMidFunc(`${currentPath}.ts`, name, req ?? {}, res ?? {}, getSubFuncs(funcs ?? []), [...configPointer, i.toString()]);
             if (funcs) return buildMidFuncs(funcs, currentPath, [...configPointer, i.toString()]);
         }
     }
@@ -182,23 +179,48 @@ function buildMidFuncs(midFuncs: MidFuncs, pathFromEntryPoint: string = '', conf
 
 function getPathFromEntryPoint(pathFromEntryPoint: string, relativePath: string)
 {
-    let resultPath = pathFromEntryPoint == '' ? './' : path.dirname(pathFromEntryPoint);
-    const relativePathSplit = relativePath.split('/');
+    if (pathFromEntryPoint === '') return relativePath;
+    let resultPath: string[] = pathFromEntryPoint.split('/').filter(item => item !== '');
+    resultPath = resultPath.slice(0, resultPath.length - 1);
+    const relativePathSplit = relativePath.split('/').filter(item => item !== '');
     for (const part of relativePathSplit)
     {
         if (part == '.') continue;
         else if (part == '..')
         {
-            resultPath = path.dirname(resultPath);
+            resultPath.pop();
         }
         else
         {
-            resultPath = `${resultPath}/${part}`;
+            resultPath.push(part);
         }
     }
-    return resultPath;
+    return resultPath.join('/');
 }
 
+function getPath(from: string, to: string)
+{
+    if (from === '') return to;
+    if (to === '') return '';
+    let resultPath: string[] = [];
+    const fromSplit = from.split('/').slice(1);
+    const toSplit = to.split('/').slice(1);
+    for (let i = 0; i < toSplit.length; i++)
+    {
+        const fromPart = fromSplit[i];
+        const toPart = toSplit[i];
+        if (fromPart === toPart) continue;
+        resultPath = [
+            ...resultPath,
+            ...Array(fromSplit.length - (i + 1)).fill('..'),
+            ...toSplit.slice(i)
+        ];
+        break;
+    }
+    const firstElement = resultPath[0];
+    if (firstElement !== '..') resultPath = ['.', ...resultPath];
+    return `${resultPath.join('/')}`;
+}
 
 function getSubRoutes(routes: Routes): [string[], RoutesInfo]    
 {
@@ -231,11 +253,11 @@ function getSubFuncsWithRouteKey(key: string, routePath: string, f: MidFuncs, cP
     {
         const {path, name, req, funcs, route, routeKey, method} = func;
         const currentFuncPath = getPathFromEntryPoint(cPath, path ?? '');
-        const routeToFuncPath = getPathFromEntryPoint(routePath, currentFuncPath);
+        const routeToFuncPath = getPath(routePath, currentFuncPath);
         if (routeKey === key)
         {
-            if (!importsObj[cPath]) importsObj[cPath] = [];
-            importsObj[cPath].push(name);
+            if (!importsObj[routeToFuncPath]) importsObj[routeToFuncPath] = [];
+            importsObj[routeToFuncPath].push(name);
             funcsInfo.push({
                 path: routeToFuncPath,
                 name: name,
@@ -293,7 +315,7 @@ function getSubFuncs(midFuncs: MidFuncs, imports: Imports = {}, funcsInfo: Funcs
     return [importArr, funcsInfo];
 }
 
-function buildMidFunc(path: string, name: string, req: ReqConfig, subFuncs: [string[], FuncsInfo], configPointer: string[])
+function buildMidFunc(path: string, name: string, req: ReqConfig, res: ResConfig, subFuncs: [string[], FuncsInfo], configPointer: string[])
 {
     const subFuncImports = subFuncs[0];
     const funcsInfo = subFuncs[1];
@@ -319,6 +341,41 @@ function buildMidFunc(path: string, name: string, req: ReqConfig, subFuncs: [str
         if (body)
         {
             funcLines.push(...getZodLines(req['body'], 'body', [...configPointer, "body"]));
+        }
+        funcLines.push('}');
+    }
+    if (res)
+    {
+        funcLines.pop();
+        for (const status in res)
+        {
+            const { headers, send, json, redirect, cookies } = res[status];
+            const resLines: string[] = [];
+            if (headers)
+            {
+                resLines.push(`res.status(${status}).set(${_encode(headers)});`);
+            }
+            if (send)
+            {
+                resLines.push(`res.status(${status}).send(${send});`);
+            }
+            if (json)
+            {
+                resLines.push(`res.status(${status}).json(${json});`);
+            }
+            if (redirect)
+            {
+                resLines.push(`res.status(${status}).redirect(${redirect});`);
+            }
+            if (cookies)
+            {
+                for (const name in cookies)
+                {
+                    const { val, options } = cookies[name];
+                    resLines.push(`res.cookie(${name}, ${val}, ${_encode(options)});`);
+                }
+            }
+            funcLines.push(...resLines);
         }
         funcLines.push('}');
     }

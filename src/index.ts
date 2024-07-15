@@ -7,6 +7,9 @@ import { packageTemp, tsconfigTemp, nodemonTemp, midConfigTempProd, indexTempPro
 import { OptionsJson, OptionsUrlencoded } from 'body-parser';
 import { CorsOptions } from 'cors';
 import { ZodTypeAny } from 'zod';
+import { IncomingHttpHeaders } from 'node:http2';
+import { URL } from 'url';
+import { CookieOptions } from 'express';
 
 export type ReqConfig = {
     body?: {
@@ -21,13 +24,29 @@ export type ReqConfig = {
         [key: string]: { type: ZodTypeAny };
     },
     params?: never,
-    dynamicRoute?: [string, ZodTypeAny]
+    dynamicRoute?: [string, ZodTypeAny],
+    headers?: HeadersObj
 };
 export type ParamType = 'string' | 'number' | 'boolean' | ['string', {enum?: string[]}] | ['string', {regex?: RegExp}] | ['number', {min?: number, max?: number, literal?: number[]}] | {
     [key: string]: ParamType
 } | [ParamType];
 export type ResConfig = {
-    [status: number]: {}
+    [status: number]: {
+        headers?: HeadersObj,
+        send?: ZodTypeAny,
+        json?: ZodTypeAny,
+        redirect?: URL,
+        cookies?: {
+            [name: string]: {
+                val: string,
+                options: CookieOptions
+            }
+        }
+        clientConfig?: {
+            add?: boolean,
+            store?: string
+        }
+    }
 };
 export type Methods = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD' | 'CONNECT' | 'TRACE';
 export type Structure = {
@@ -43,6 +62,7 @@ export type MidFunc = {
     funcs?: MidFuncs,
     route?: string // relative route to the routeKey
     routeKey?: string // identifier for the routes
+    middleware?: boolean
 } 
 export type MidFuncs = MidFunc[];
 export type Route = {
@@ -82,6 +102,11 @@ export type rServer = Readonly<Server>;
 type App = {
     path?: string,
     docker?: DockerConfig,
+    stores?: {
+        [name: string]: {
+            
+        }
+    }
 };
 export type rApp = Readonly<App>;
 type DockerCommands = 'FROM' | 'RUN' | 'CMD' | 'LABEL' | 'EXPOSE' | 'ENV' | 'ADD' | 'COPY' | 'ENTRYPOINT' | 'VOLUME' | 'USER' | 'WORKDIR' | 'ARG' | 'ONBUILD' | 'STOPSIGNAL' | 'HEALTHCHECK' | 'SHELL';
@@ -105,6 +130,20 @@ export type MidConfig = Readonly<{
     server: Server,
     app: App
 }>
+export type RemoveIndexSignature<T> = {  
+    [K in keyof T as string extends K
+      ? never
+      : number extends K
+        ? never
+        : symbol extends K
+          ? never
+          : K
+    ]: T[K];
+  }
+export type HttpDefaultRequestHeaders = RemoveIndexSignature<IncomingHttpHeaders>  
+export type HeadersObj = {
+    [key in keyof HttpDefaultRequestHeaders]: string;
+};
 
 export function init()
 {
