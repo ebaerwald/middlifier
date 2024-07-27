@@ -1,6 +1,6 @@
 import { CorsOptions } from 'cors';
 import { Server, MidFuncs, Secrets, Routes, MidFunc, ParamType, ReqConfig, Methods, ResConfig } from '../index';
-import { _arrayToString, _write, _encode, type Imports, _getVarValue } from '../helper';
+import { _arrayToString, _write, _encode, type Imports, _getVarValue, _splitArrayByKeys } from '../helper';
 import { OptionsJson, OptionsUrlencoded } from 'body-parser';
 import path from 'path';
 
@@ -26,25 +26,35 @@ type RouteFuncInfo = {
     path: string,
     name: string,
     req: ReqConfig,
+    res?: ResConfig,
     method?: Methods,
     route?: string
+    funcPathFromEntryPoint: string
 }
 
 type RouteFuncsInfo = RouteFuncInfo[];
 
-type TestObj = {
-    [route: string]: [
-        Methods, // method
-        ReqConfig, 
-        ResConfig
-    ] | TestObj
+type FinalObj = {
+    absoluteRoute: string,
+    funcPathFromEntryPoint: string,
+    method?: Methods, // method
+    req: ReqConfig, 
+    res?: ResConfig,
+    funcName: string
 }
+
+export type FinalObjs = {
+    [routeName: string]: FinalObj[]
+}
+
+let finalObjs: FinalObjs = {};
 
 export function buildServerStructure(server: Server)
 {
     const { structure, cors, secrets, port, json, urlencoded, morgan, sets } = server;
     const { routes, funcs } = structure;
-    buildEntryFile(routes, funcs, cors, secrets, port, json, urlencoded, morgan, sets);
+    const serverInfo = buildEntryFile(routes, funcs, cors, secrets, port, json, urlencoded, morgan, sets);
+    return serverInfo;
 }
 
 function buildEntryFile(
@@ -57,7 +67,7 @@ function buildEntryFile(
     urlencoded: OptionsUrlencoded | undefined,
     morgan: string | undefined,
     sets: { [key: string]: any } | undefined
-)
+): FinalObjs
 {
     let configPointer = ["server", "structure"];
     let f = funcs;
@@ -76,8 +86,8 @@ function buildEntryFile(
             if (!imports[path]) imports[path] = [];
             imports[path].push(name);
             bottomLines.push(`app.use("${route}", ${name});`);
-            buildRoute(`${path}.ts`, name, getSubFuncsWithRouteKey(name, path, funcs ?? []), getSubRoutes(routes ?? []));
-            buildRoutes(routes ?? [], funcs ?? [], path);
+            buildRoute(`${path}.ts`, name, getSubFuncsWithRouteKey(name, path, funcs ?? []), getSubRoutes(routes ?? []), route);
+            buildRoutes(routes ?? [], funcs ?? [], path, route);
         }
     }
     if (f)
@@ -118,10 +128,17 @@ function buildEntryFile(
         ...bottomLines,
         '',
         `app.listen(${port}, () => console.log('Server running on port ${port}'));`
-    ]))
+    ]));
+    for (const routeName in finalObjs)
+    {
+        const routeObj = finalObjs[routeName];
+        buildDocu(routeName, routeObj);
+        buildTest(routeName, routeObj);
+    }
+    return finalObjs;
 }
 
-function buildRoutes(rout: Routes, funcs: MidFuncs, pathFromEntryPoint: string = '')
+function buildRoutes(rout: Routes, funcs: MidFuncs, pathFromEntryPoint: string, currentRoute: string)
 {
     for (let i = 0; i < rout.length; i++)
     {
@@ -129,14 +146,16 @@ function buildRoutes(rout: Routes, funcs: MidFuncs, pathFromEntryPoint: string =
         const {path, name, routes} = route;
         const subRoutes = getSubRoutes(routes ?? []);
         const currentPath = getPathFromEntryPoint(pathFromEntryPoint, path);
-        buildRoute(`${currentPath}.ts`, name, getSubFuncsWithRouteKey(name, currentPath, funcs), subRoutes);
+        buildRoute(`${currentPath}.ts`, name, getSubFuncsWithRouteKey(name, currentPath, funcs), subRoutes, currentRoute);
+        buildRoutes(routes ?? [], funcs ?? [], `${path}.ts`, `${currentRoute}${route}`);
     }
 }
 
-function buildRoute(path: string, routeName: string, subFuncs: [string[], RouteFuncsInfo], subRoutes: [string[], RoutesInfo])
+function buildRoute(path: string, routeName: string, subFuncs: [string[], RouteFuncsInfo], subRoutes: [string[], RoutesInfo], absoluteRoute: string)
 {
     const [routesImports, routesInfo] = subRoutes;
     const [funcsImports, funcsInfo] = subFuncs;
+    finalObjs[routeName] = [];
     const content: string[] = [`export const ${routeName} = Router();`, ''];
     for (const r of routesInfo)
     {
@@ -146,12 +165,20 @@ function buildRoute(path: string, routeName: string, subFuncs: [string[], RouteF
     }
     for (const f of funcsInfo)
     {
-        let {name, route, req, method} = f
+        let {name, route, req, method, res, funcPathFromEntryPoint} = f
+        finalObjs[routeName].push({
+            absoluteRoute: absoluteRoute,
+            funcPathFromEntryPoint: funcPathFromEntryPoint,
+            funcName: name,
+            req: req,
+            res: res,
+            method: method,
+
+        })
         const dynamicRoute = req.dynamicRoute ? `/:${req.dynamicRoute[0]}` : '';
         const finalRoute = route ? `${route}${dynamicRoute}` : '""';
         content.push(`${routeName}.route(${finalRoute}).${method?.toLowerCase() ?? 'all'}(${name});`);
     }
-
     _write(path, _arrayToString([
         'import { Router } from "express";',
         ...routesImports,
@@ -263,7 +290,8 @@ function getSubFuncsWithRouteKey(key: string, routePath: string, f: MidFuncs, cP
                 name: name,
                 req: req ?? {},
                 method: method,
-                route: route
+                route: route, 
+                funcPathFromEntryPoint: currentFuncPath
             });
         }
         return getSubFuncsWithRouteKey(key, routePath, funcs ?? [], currentFuncPath, importsObj, funcsInfo);
@@ -304,7 +332,6 @@ function getSubFuncs(midFuncs: MidFuncs, imports: Imports = {}, funcsInfo: Funcs
         {
             funcInfo.path = false;
             funcsInfo.push(funcInfo);
-
             return getSubFuncs([...midFuncs.slice(i + 1, midFuncs.length) ,...(funcs ?? [])], imports, funcsInfo);
         }
     }
@@ -442,31 +469,19 @@ function getZodLines(data: any, paramType: keyof ReqConfig, configPointer: strin
     ]
 }
 
-
-function buildTestsAndDoku(testObj: TestObj, testLines: string[] = [], dokuLines: string[] = [])
+function buildTest(routeName: string, obj: FinalObj[])
 {
-    for (const route in testObj)
+    for (const element of obj)
     {
-        const value = testObj[route];
-        if (Array.isArray(value))
-        {
-            const [method, req, res] = value;
-            testLines.push(...buildTest(route, method, req, res));
-            dokuLines.push(...buildDoku(route, method, req, res));
-        }
-        else
-        {
-            return buildTestsAndDoku(value, testLines, dokuLines);
-        }
+        const {absoluteRoute, funcPathFromEntryPoint, method, req, res, funcName} = element;
+        const name = routeName
     }
 }
 
-function buildTest(route: string, method: Methods, req: ReqConfig, res: ResConfig): string[]
+function buildDocu(routeName: string, obj: FinalObj[])
 {
-    return [];
-}
-
-function buildDoku(route: string, method: Methods, req: ReqConfig, res: ResConfig): string[]
-{
-    return [];
+    for (const element of obj)
+    {
+        const {absoluteRoute, funcPathFromEntryPoint, method, req, res, funcName} = element;
+    }
 }

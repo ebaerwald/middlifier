@@ -69,7 +69,7 @@ export function buildServer(config: MidConfig)
     }
     _createDirIfNotExistent('./src');
     process.chdir('./src');
-    buildServerStructure(server);
+    const serverInfo = buildServerStructure(server);
     
     _createDirIfNotExistent('./db');
     process.chdir('./db'); 
@@ -95,4 +95,5 @@ export function buildServer(config: MidConfig)
         }
     }
     process.chdir('../../..');
+    return serverInfo;
 }

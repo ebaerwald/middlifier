@@ -182,5 +182,6 @@ export function end(app: string, server: string)
 
 export function start(config: MidConfig)
 {
-    buildServer(config);
+    const serverInfo = buildServer(config);
+    buildApp(config, serverInfo);
 }

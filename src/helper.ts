@@ -199,3 +199,72 @@ function splitAtFirstMatch(str: string, delimiter: string) {
     return [str.substring(0, index), str.substring(index + delimiter.length)];
 }
 
+export function _splitArrayByKeys<T extends Array<{[keys: string]: any}>>(arr: T, ...keys: (keyof T[0])[][]): (({[keys: string]: any})[])[]
+{
+   const result: (({[keys: string]: any})[])[] = [];
+   for (const key of keys)
+   {
+        const filteredObj = _filterObjectByKeys(arr, key);
+        result.push(filteredObj);
+   }
+   return result;
+}
+
+function _filterObjectByKeys<T extends Array<{[keys: string]: any}>>(arr: 
+    T,
+    keys: (keyof T[0])[]
+)
+{
+    let result: Array<{[keys: string]: any}> = [];
+    for (const a of arr)
+    {
+        const line: {[keys: string]: any}  = {};
+        for (const key of keys as any)
+        {
+            line[key] = a[key];
+        }
+        result.push(line);
+    }
+    return result;
+}
+
+export function _replaceMultipleValues(value: string, searchStrs: string | string[], replaceStrs: string | string[])
+{
+    if (Array.isArray(searchStrs))
+    {
+        if (Array.isArray(replaceStrs))
+        {
+            const length = searchStrs.length > replaceStrs.length ? replaceStrs.length : searchStrs.length;
+            for (let i = 0; i < length; i++)
+            {
+                const searchStr = searchStrs[i];
+                const replaceStr = replaceStrs[i];
+                value.replace(searchStr, replaceStr);
+            }
+        }
+        else
+        {
+            for (const searchStr of searchStrs)
+            {
+                value.replace(searchStr, replaceStrs);
+            }
+        }
+    }
+    else
+    {
+        if (Array.isArray(replaceStrs))
+        {
+            for (const replaceStr of replaceStrs)
+            {
+                value.replace(searchStrs, replaceStr);
+            }
+        }
+        else
+        {
+            value.replace(searchStrs, replaceStrs);
+        }
+    }
+    return value;
+}
+
+
