@@ -1,6 +1,6 @@
 import { CorsOptions } from 'cors';
 import { Server, MidFuncs, Secrets, Routes, MidFunc, ParamType, ReqConfig, Methods, ResConfig } from '../index';
-import { _arrayToString, _write, _encode, type Imports, _getVarValue, _splitArrayByKeys } from '../helper';
+import { _arrayToString, _write, _encode, type Imports, _getVarValue, _splitArrayByKeys, _replaceMultipleValues } from '../helper';
 import { OptionsJson, OptionsUrlencoded } from 'body-parser';
 import path from 'path';
 
@@ -471,10 +471,15 @@ function getZodLines(data: any, paramType: keyof ReqConfig, configPointer: strin
 
 function buildTest(routeName: string, obj: FinalObj[])
 {
+    const imports: Imports = {};
     for (const element of obj)
     {
         const {absoluteRoute, funcPathFromEntryPoint, method, req, res, funcName} = element;
-        const name = routeName
+        let name = _replaceMultipleValues(routeName, ['Route', 'route'], '');
+        const path = getPath(`./tests/${name.toLowerCase()}`, funcPathFromEntryPoint);
+        if (!imports[path]) imports[path] = [];
+        imports[path].push(funcName);
+        name = name.length > 0 ? name[0].toUpperCase() + name.slice(1) : name;
     }
 }
 
