@@ -99,7 +99,7 @@ export type Server = {
     docker?: DockerConfig
 };
 export type rServer = Readonly<Server>;
-type App = {
+export type App = {
     path?: string,
     docker?: DockerConfig,
     stores?: {
