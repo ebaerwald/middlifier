@@ -130,3 +130,4 @@ dist
 .pnp.*
 
 gen/
+package-lock.json

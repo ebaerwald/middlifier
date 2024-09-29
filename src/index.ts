@@ -6,67 +6,120 @@ import { PoolConfig } from 'pg';
 import { packageTemp, tsconfigTemp, nodemonTemp, midConfigTempProd, indexTempProd, midConfigTempDev, indexTempDev} from './temp';
 import { OptionsJson, OptionsUrlencoded } from 'body-parser';
 import { CorsOptions } from 'cors';
-import { $ } from 'bun';
+import { ZodTypeAny } from 'zod';
+import { IncomingHttpHeaders } from 'node:http2';
+import { URL } from 'url';
+import { CookieOptions } from 'express';
+import { AxiosInterceptorOptions, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
 export type ReqConfig = {
     body?: {
-        [key: string]: { type: ParamType, required?: boolean };
+        [key: string]: { type: ZodTypeAny };
     },
     params?: {
-        [key: string]: { type: ParamType, required?: boolean, urlencoded?: boolean };
+        [key: string]: { type: ZodTypeAny, urlencoded?: boolean };
     },
-    dynamicRoute?: never
+    dynamicRoute?: never,
+    headers?: HeadersObj
 } | {
     body?: {
-        [key: string]: { type: ParamType, required?: boolean };
+        [key: string]: { type: ZodTypeAny };
     },
     params?: never,
-    dynamicRoute?: string
+    dynamicRoute?: [string, ZodTypeAny],
+    headers?: HeadersObj
 };
 export type ParamType = 'string' | 'number' | 'boolean' | ['string', {enum?: string[]}] | ['string', {regex?: RegExp}] | ['number', {min?: number, max?: number, literal?: number[]}] | {
     [key: string]: ParamType
 } | [ParamType];
-type ResConfig = {};
-export type MidFunc = {
-    method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD' | 'CONNECT' | 'TRACE',
-    req?: ReqConfig,
-    res?: ResConfig,
-};
-export type MidFuncs = {
-    [path: string]: {
-        [fileName: string]: {
-            [funcName: string]: MidFunc 
+export type ResConfig = {
+    [status: number]: {
+        headers?: HeadersObj,
+        send?: ZodTypeAny,
+        json?: ZodTypeAny,
+        redirect?: URL,
+        cookies?: {
+            [name: string]: {
+                val: string,
+                options: CookieOptions
+            }
+        }
+        clientConfig?: {
+            add?: boolean,
+            store?: string
+        },
+        axiosInstance?: {
+            baseURL: string,
+            req?: {
+                onFulfilled?: ((value: InternalAxiosRequestConfig<any>) => InternalAxiosRequestConfig<any> | Promise<InternalAxiosRequestConfig<any>>),
+                onRejected?: ((error: any) => any) | null, options?: AxiosInterceptorOptions
+            }
+            res?: {
+                onFulfilled?: ((value: AxiosResponse<any, any>) => AxiosResponse<any, any> | Promise<AxiosResponse<any, any>>) | null,
+                onRejected?: ((error: any) => any) | null, options?: AxiosInterceptorOptions
+            }
         }
     }
 };
-type Server = {
-    port: number | string, // string if you get the variable from .env file
+export type Methods = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD' | 'CONNECT' | 'TRACE';
+export type Structure = {
+    routes?: Routes,
+    funcs?: MidFuncs
+}
+export type MidFunc = {
+    name: string, // name of the function
+    path?: string, // relative path to the file
+    method?: Methods,
+    req?: ReqConfig,
+    res?: ResConfig,
+    funcs?: MidFuncs,
+    route?: string // relative route to the routeKey
+    routeKey?: string // identifier for the routes
+    middleware?: boolean
+} 
+export type MidFuncs = MidFunc[];
+export type Route = {
+    path: string, 
+    name: string,
+    routes?: Routes,
+    route: string // route for upper route 
+}
+export type Routes = Route[];
+
+export type Secrets = {
+    [key: string]: string
+};
+
+export type Server = {
+    port: number | string,
     path?: string,
     host?: string,
     ssl?: boolean,
-    set?: {
+    structure: Structure,
+    sets?: {
         [key: string]: any
     },
     cors?: CorsOptions,
-    funcs: MidFuncs,
-    indexFuncNames?: string[],
-    routes?: Routes,
     json?: OptionsJson,
     urlencoded?: OptionsUrlencoded,
+    morgan?: string,
     drizzle?: {
         config: Config,
         dbConfig: PoolConfig,
         schemas?: Schemas
     },
-    secrets?: {
-        [key: string]: string
-    },
+    secrets?: Secrets,
     docker?: DockerConfig
 };
 export type rServer = Readonly<Server>;
-type App = {
+export type App = {
     path?: string,
     docker?: DockerConfig,
+    stores?: {
+        [name: string]: {
+            
+        }
+    }
 };
 export type rApp = Readonly<App>;
 type DockerCommands = 'FROM' | 'RUN' | 'CMD' | 'LABEL' | 'EXPOSE' | 'ENV' | 'ADD' | 'COPY' | 'ENTRYPOINT' | 'VOLUME' | 'USER' | 'WORKDIR' | 'ARG' | 'ONBUILD' | 'STOPSIGNAL' | 'HEALTHCHECK' | 'SHELL';
@@ -90,38 +143,20 @@ export type MidConfig = Readonly<{
     server: Server,
     app: App
 }>
-
-/**
- * @param {string} path Path of the routes, for the index routes use "-" 
- * @param {InnerRoute} InnerRoute
- */
-export type Routes = {
-    [path: string]: InnerRoute
-}
-
-/**
- * @param {string} route Routes can be nested.
- * @param {InnerRoute} InnerRoute
- */
-export type InnerRoute = {
-    [route: string]: InnerRoute | ([string] | [string, string])[] // funcName or funcName and path, if path search path in Routes, if not search funcName in Midfuncs
-}
-
-export type FinalRouteObj = {
-    [path: string]: FinalInnerRoute
-}
-
-export type FinalInnerRoute = {
-    [route: string]: FinalInnerRoute | FuncInfo[]
-}
-
-/**
-* @param {string} funcPath - first
-* @param {string} funcName - second
-* @param {string | undefined} method - third
-* @param {string | undefined} dynamicRoute - fourth
-*/
-export type FuncInfo = [string, string] | [string, string, string] | [string, string, string, string];
+export type RemoveIndexSignature<T> = {  
+    [K in keyof T as string extends K
+      ? never
+      : number extends K
+        ? never
+        : symbol extends K
+          ? never
+          : K
+    ]: T[K];
+  }
+export type HttpDefaultRequestHeaders = RemoveIndexSignature<IncomingHttpHeaders>  
+export type HeadersObj = {
+    [key in keyof HttpDefaultRequestHeaders]: string;
+};
 
 export function init()
 {
@@ -160,6 +195,6 @@ export function end(app: string, server: string)
 
 export function start(config: MidConfig)
 {
-    buildServer(config);
-    buildApp(config);
+    const serverInfo = buildServer(config);
+    buildApp(config, serverInfo);
 }
