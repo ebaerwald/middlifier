@@ -34,7 +34,7 @@ type RouteFuncInfo = {
 
 type RouteFuncsInfo = RouteFuncInfo[];
 
-type FinalObj = {
+export type FinalObj = {
     absoluteRoute: string,
     funcPathFromEntryPoint: string,
     method?: Methods, // method

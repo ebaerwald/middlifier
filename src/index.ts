@@ -10,6 +10,7 @@ import { ZodTypeAny } from 'zod';
 import { IncomingHttpHeaders } from 'node:http2';
 import { URL } from 'url';
 import { CookieOptions } from 'express';
+import { AxiosInterceptorOptions, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 
 export type ReqConfig = {
     body?: {
@@ -18,7 +19,8 @@ export type ReqConfig = {
     params?: {
         [key: string]: { type: ZodTypeAny, urlencoded?: boolean };
     },
-    dynamicRoute?: never
+    dynamicRoute?: never,
+    headers?: HeadersObj
 } | {
     body?: {
         [key: string]: { type: ZodTypeAny };
@@ -45,6 +47,17 @@ export type ResConfig = {
         clientConfig?: {
             add?: boolean,
             store?: string
+        },
+        axiosInstance?: {
+            baseURL: string,
+            req?: {
+                onFulfilled?: ((value: InternalAxiosRequestConfig<any>) => InternalAxiosRequestConfig<any> | Promise<InternalAxiosRequestConfig<any>>),
+                onRejected?: ((error: any) => any) | null, options?: AxiosInterceptorOptions
+            }
+            res?: {
+                onFulfilled?: ((value: AxiosResponse<any, any>) => AxiosResponse<any, any> | Promise<AxiosResponse<any, any>>) | null,
+                onRejected?: ((error: any) => any) | null, options?: AxiosInterceptorOptions
+            }
         }
     }
 };
