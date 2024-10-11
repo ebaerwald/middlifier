@@ -1,6 +1,6 @@
 {
   "name": "middlifier",
-  "version": "1.0.185",
+  "version": "1.0.187",
   "description": "Middlifier provides a command where you can give instructions to build a general backend and middleware template.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -39,11 +39,12 @@
     "drizzle-orm": "^0.30.10",
     "express": "^4.19.2",
     "fs": "^0.0.1-security",
-    "middlifier": "^1.0.185",
+    "middlifier": "^1.0.187",
     "mongoose": "^8.4.5",
     "nodemon": "^3.1.4",
     "pg-pool": "^3.6.2",
     "prompt-sync": "^4.2.0",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "zustand": "^5.0.0-rc.2"
   }
 }

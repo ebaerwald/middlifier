@@ -1,7 +1,6 @@
 import { execSync } from 'child_process';
 import { _read, _decode, _encode, _write } from './src/helper';
 
-execSync('nvm use node', {stdio: "inherit"});
 execSync('bun x tsc', {stdio: "inherit"});
 console.log('Building done!');
 let packageJsonContent = _read('package.json');

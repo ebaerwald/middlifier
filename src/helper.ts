@@ -102,6 +102,8 @@ export function _rename(firstPath: fs.PathLike, secondPath: fs.PathLike)
     }
 }
 
+
+
 export function _remove(paths: fs.PathLike | fs.PathLike[])
 {
     try {

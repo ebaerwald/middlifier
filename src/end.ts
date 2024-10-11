@@ -17,5 +17,4 @@ for (const arg of args)
     }
     lastArg = arg;
 }
-console.log('Arguments:', app, server);
 end(app, server);

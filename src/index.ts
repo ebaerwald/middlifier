@@ -75,7 +75,7 @@ export type MidFunc = {
     funcs?: MidFuncs,
     route?: string // relative route to the routeKey
     routeKey?: string // identifier for the routes
-    middleware?: boolean
+    middleware?: boolean,
 } 
 export type MidFuncs = MidFunc[];
 export type Route = {
